@@ -1,7 +1,8 @@
 import asyncio
-
+import openpyxl
+from io import BytesIO
 from aiogram import Router, F
-from aiogram.filters import CommandStart
+from aiogram.filters import CommandStart, Command
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, \
     KeyboardButton
 from aiogram.fsm.context import FSMContext
@@ -22,6 +23,10 @@ router.callback_query.filter(IsAdminOrManager())
 class AddUserStates(StatesGroup):
     WAITING_PHONE = State()
     CHOOSE_TYPE = State()
+
+
+class ExportStates(StatesGroup):
+    WAITING_FILE = State()
 
 
 @router.callback_query(F.data == "back_to_main")
@@ -905,3 +910,76 @@ async def change_contractor_admin(callback: CallbackQuery):
     except Exception as e:
         await bot.send_message(RAZRAB, f'{callback.from_user.id} - {str(e)}')
         await asyncio.sleep(0.05)
+
+
+@router.message(Command("import"))
+async def command_export(message: Message, state: FSMContext):
+    try:
+        await state.clear()
+        await message.answer("Пожалуйста, загрузите Excel-файл с резидентами.")
+        await state.set_state(ExportStates.WAITING_FILE)
+    except Exception as e:
+        await bot.send_message(RAZRAB, f'{message.from_user.id} - {str(e)}')
+        await asyncio.sleep(0.05)
+
+
+@router.message(ExportStates.WAITING_FILE, F.document)
+async def handle_export_file(message: Message, state: FSMContext):
+    excel_file = None
+    try:
+        if not message.document.file_name.endswith('.xlsx'):
+            await message.answer("Пожалуйста, загрузите файл в формате xlsx")
+            return
+
+        file_id = message.document.file_id
+        file = await bot.get_file(file_id)
+        file_path = file.file_path
+
+        excel_file = BytesIO()
+        await bot.download_file(file_path, excel_file)
+        excel_file.seek(0)
+
+        wb = openpyxl.load_workbook(excel_file)
+        sheet = wb.active
+        errors = []
+        success_count = 0
+        total_rows = sheet.max_row
+
+        async with AsyncSessionLocal() as session:
+            for row in range(1, total_rows + 1):
+                phone_cell = sheet.cell(row=row, column=1)
+                fio_cell = sheet.cell(row=row, column=2)
+                phone = str(phone_cell.value) if phone_cell.value is not None else ""
+                fio = fio_cell.value
+
+                if not phone or not is_valid_phone(phone) or not fio:
+                    errors.append(f"Строка №{row} - не корректный телефон или фио должно быть заполнено")
+                    continue
+
+                try:
+                    resident = Resident(phone=phone, fio=fio)
+                    session.add(resident)
+                    success_count += 1
+                except Exception as e:
+                    errors.append(f"Строка №{row} - ошибка при добавлении в базу: {str(e)}")
+
+            await session.commit()
+
+        report = f"Загружено {success_count} резидентов из {total_rows} строк."
+        if errors:
+            error_report = "\n".join(errors)
+            report += f"\nОшибки:\n{error_report}"
+
+        if len(report) > 4096:
+            for x in range(0, len(report), 4096):
+                await message.answer(report[x:x+4096])
+        else:
+            await message.answer(report)
+
+    except Exception as e:
+        await bot.send_message(RAZRAB, f'{message.from_user.id} - {str(e)}')
+        await asyncio.sleep(0.05)
+    finally:
+        if excel_file:
+            excel_file.close()
+        await state.clear()

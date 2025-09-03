@@ -220,15 +220,27 @@ async def process_plot_input(message: Message, state: FSMContext):
         plot_number = message.text
 
         async with AsyncSessionLocal() as session:
-            new_request = RegistrationRequest(
-                resident_id=data['resident_id'],
-                fio=data['fio'],
-                tg_id=message.from_user.id,
-                username=message.from_user.username,
-                first_name=message.from_user.first_name,
-                last_name=message.from_user.last_name,
-                plot_number=plot_number,
-            )
+            if data.get('fio'):
+                new_request = RegistrationRequest(
+                    resident_id=data['resident_id'],
+                    fio=data['fio'],
+                    tg_id=message.from_user.id,
+                    username=message.from_user.username,
+                    first_name=message.from_user.first_name,
+                    last_name=message.from_user.last_name,
+                    plot_number=plot_number,
+                )
+            else:
+                resident = await session.get(Resident, data['resident_id'])
+                new_request = RegistrationRequest(
+                    resident_id=data['resident_id'],
+                    fio=resident.fio,
+                    tg_id=message.from_user.id,
+                    username=message.from_user.username,
+                    first_name=message.from_user.first_name,
+                    last_name=message.from_user.last_name,
+                    plot_number=plot_number,
+                )
             session.add(new_request)
             await session.commit()
 
