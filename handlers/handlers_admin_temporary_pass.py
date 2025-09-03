@@ -311,12 +311,15 @@ async def approve_temp_pass(callback: CallbackQuery, state: FSMContext):
             tg_ids = await get_active_admins_managers_sb_tg_ids()
 
             for tg_id in tg_ids:
-                await bot.send_message(
-                    tg_id,
-                    text=f'Временный пропуск {text_to_all} на машину с номером {pass_request.car_number} одобрен.',
-                    reply_markup=admin_reply_keyboard
-                )
-                await asyncio.sleep(0.05)
+                try:
+                    await bot.send_message(
+                        tg_id,
+                        text=f'Временный пропуск {text_to_all} на машину с номером {pass_request.car_number} одобрен.',
+                        reply_markup=admin_reply_keyboard
+                    )
+                    await asyncio.sleep(0.05)
+                except:
+                    pass
             await callback.message.answer(
                 "Управление временными пропусками:",
                 reply_markup=get_temporary_passes_management()

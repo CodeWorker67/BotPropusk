@@ -404,21 +404,27 @@ async def process_comment_and_save(message: Message, state: FSMContext):
             await message.answer(f"✅ Ваш временный пропуск одобрен на машину с номером {data.get('car_number').upper()}", reply_markup=keyboard)
             tg_ids = await get_active_admins_managers_sb_tg_ids()
             for tg_id in tg_ids:
-                await bot.send_message(
-                    tg_id,
-                    text=f'Пропуск от подрядчика {contractor.company}_{contractor.position} на машину с номером {data.get("car_number").upper()} одобрен автоматически.',
-                    reply_markup=admin_reply_keyboard
-                )
-                await asyncio.sleep(0.05)
+                try:
+                    await bot.send_message(
+                        tg_id,
+                        text=f'Пропуск от подрядчика {contractor.company}_{contractor.position} на машину с номером {data.get("car_number").upper()} одобрен автоматически.',
+                        reply_markup=admin_reply_keyboard
+                    )
+                    await asyncio.sleep(0.05)
+                except:
+                    pass
         else:
             tg_ids = await get_active_admins_and_managers_tg_ids()
             for tg_id in tg_ids:
-                await bot.send_message(
-                    tg_id,
-                    text=f'Поступила заявка на временный пропуск от подрядчика {contractor.fio}.\n(Пропуска > Временные пропуска > На утверждении)',
-                    reply_markup=admin_reply_keyboard
-                )
-                await asyncio.sleep(0.05)
+                try:
+                    await bot.send_message(
+                        tg_id,
+                        text=f'Поступила заявка на временный пропуск от подрядчика {contractor.fio}.\n(Пропуска > Временные пропуска > На утверждении)',
+                        reply_markup=admin_reply_keyboard
+                    )
+                    await asyncio.sleep(0.05)
+                except:
+                    pass
         await state.clear()
     except Exception as e:
         await bot.send_message(RAZRAB, f'{message.from_user.id} - {str(e)}')
@@ -700,11 +706,14 @@ async def process_work_types(message: Message, state: FSMContext):
             await message.answer("✅ Заявка на регистрацию субподрядчика отправлена администратору!")
             tg_ids = await get_active_admins_and_managers_tg_ids()
             for tg_id in tg_ids:
-                await bot.send_message(
-                    tg_id,
-                    text=f'Поступила заявка на регистрацию субподрядчика от подрядчика {contractor.company}_{contractor.position}.\n(Регистрация > Заявки субподрядчиков от подрядчиков)',
-                    reply_markup=admin_reply_keyboard
-                )
+                try:
+                    await bot.send_message(
+                        tg_id,
+                        text=f'Поступила заявка на регистрацию субподрядчика от подрядчика {contractor.company}_{contractor.position}.\n(Регистрация > Заявки субподрядчиков от подрядчиков)',
+                        reply_markup=admin_reply_keyboard
+                    )
+                except:
+                    pass
             text = (
                 f"ФИО: {contractor.fio}\n"
                 f"Компания: {contractor.company}\n"

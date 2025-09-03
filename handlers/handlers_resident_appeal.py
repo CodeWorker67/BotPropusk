@@ -86,12 +86,15 @@ async def save_appeal(message: Message, state: FSMContext):
         await message.answer("✅ Ваше обращение успешно отправлено в УК!")
         tg_ids = await get_active_admins_and_managers_tg_ids()
         for tg_id in tg_ids:
-            await bot.send_message(
-                tg_id,
-                text=f'Поступило обращение от резидента {resident.fio}.\n(Обращения к УК > Обращения в ожидании)',
-                reply_markup=admin_reply_keyboard
-            )
-            await asyncio.sleep(0.05)
+            try:
+                await bot.send_message(
+                    tg_id,
+                    text=f'Поступило обращение от резидента {resident.fio}.\n(Обращения к УК > Обращения в ожидании)',
+                    reply_markup=admin_reply_keyboard
+                )
+                await asyncio.sleep(0.05)
+            except:
+                pass
         await state.clear()
 
         # Возвращаемся в меню обращений

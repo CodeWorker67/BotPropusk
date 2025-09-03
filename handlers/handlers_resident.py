@@ -188,11 +188,14 @@ async def process_work_types(message: Message, state: FSMContext):
             await message.answer("✅ Заявка на регистрацию подрядчика отправлена администратору!")
             tg_ids = await get_active_admins_and_managers_tg_ids()
             for tg_id in tg_ids:
-                await bot.send_message(
-                    tg_id,
-                    text=f'Поступила заявка на регистрацию подрядчика от резидента {resident.fio}.\n(Регистрация > Заявки подрядчиков от резидентов)',
-                    reply_markup=admin_reply_keyboard
-                )
+                try:
+                    await bot.send_message(
+                        tg_id,
+                        text=f'Поступила заявка на регистрацию подрядчика от резидента {resident.fio}.\n(Регистрация > Заявки подрядчиков от резидентов)',
+                        reply_markup=admin_reply_keyboard
+                    )
+                except:
+                    pass
             text = (
                 f"👤 ФИО: {resident.fio}\n"
                 f"🏠 Номер участка: {resident.plot_number}"
@@ -301,12 +304,15 @@ async def process_car_owner(message: Message, state: FSMContext):
         await message.answer("✅ Заявка на постоянный пропуск отправлена!")
         tg_ids = await get_active_admins_and_managers_tg_ids()
         for tg_id in tg_ids:
-            await bot.send_message(
-                tg_id,
-                text=f'Поступила заявка на постоянный пропуск от резидента {resident.fio}.\n(Пропуска > Постоянные пропуска > На утверждении)',
-                reply_markup=admin_reply_keyboard
-            )
-            await asyncio.sleep(0.05)
+            try:
+                await bot.send_message(
+                    tg_id,
+                    text=f'Поступила заявка на постоянный пропуск от резидента {resident.fio}.\n(Пропуска > Постоянные пропуска > На утверждении)',
+                    reply_markup=admin_reply_keyboard
+                )
+                await asyncio.sleep(0.05)
+            except:
+                pass
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="Оформить постоянный пропуск", callback_data="create_permanent_pass")],
             [InlineKeyboardButton(text="На подтверждении", callback_data="my_pending_passes")],
@@ -795,21 +801,27 @@ async def process_comment_and_save(message: Message, state: FSMContext):
             await message.answer(f"✅ Ваш временный пропуск одобрен на машину с номером {data.get('car_number').upper()}", reply_markup=keyboard)
             tg_ids = await get_active_admins_managers_sb_tg_ids()
             for tg_id in tg_ids:
-                await bot.send_message(
-                    tg_id,
-                    text=f'Пропуск от резидента {resident.fio} на машину с номером {data.get("car_number").upper()} одобрен автоматически.',
-                    reply_markup=admin_reply_keyboard
-                )
-                await asyncio.sleep(0.05)
+                try:
+                    await bot.send_message(
+                        tg_id,
+                        text=f'Пропуск от резидента {resident.fio} на машину с номером {data.get("car_number").upper()} одобрен автоматически.',
+                        reply_markup=admin_reply_keyboard
+                    )
+                    await asyncio.sleep(0.05)
+                except:
+                    pass
         else:
             tg_ids = await get_active_admins_and_managers_tg_ids()
             for tg_id in tg_ids:
-                await bot.send_message(
-                    tg_id,
-                    text=f'Поступила заявка на временный пропуск от резидента {resident.fio}.\n(Пропуска > Временные пропуска > На утверждении)',
-                    reply_markup=admin_reply_keyboard
-                )
-                await asyncio.sleep(0.05)
+                try:
+                    await bot.send_message(
+                        tg_id,
+                        text=f'Поступила заявка на временный пропуск от резидента {resident.fio}.\n(Пропуска > Временные пропуска > На утверждении)',
+                        reply_markup=admin_reply_keyboard
+                    )
+                    await asyncio.sleep(0.05)
+                except:
+                    pass
         await state.clear()
     except Exception as e:
         await bot.send_message(RAZRAB, f'{message.from_user.id} - {str(e)}')

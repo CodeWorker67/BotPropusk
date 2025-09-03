@@ -258,12 +258,15 @@ async def approve_pass(callback: CallbackQuery, state: FSMContext):
                 logging.error(f"Не удалось отправить сообщение резиденту: {e}")
             tg_ids = await get_active_admins_managers_sb_tg_ids()
             for tg_id in tg_ids:
-                await bot.send_message(
-                    tg_id,
-                    text=f'Постоянный пропуск от резидента {resident.fio} на машину с номером {pass_request.car_number} одобрен.',
-                    reply_markup=admin_reply_keyboard
-                )
-                await asyncio.sleep(0.05)
+                try:
+                    await bot.send_message(
+                        tg_id,
+                        text=f'Постоянный пропуск от резидента {resident.fio} на машину с номером {pass_request.car_number} одобрен.',
+                        reply_markup=admin_reply_keyboard
+                    )
+                    await asyncio.sleep(0.05)
+                except:
+                    pass
             # Сообщение админу
             await callback.message.answer(
                 "Управление постоянными пропусками:",

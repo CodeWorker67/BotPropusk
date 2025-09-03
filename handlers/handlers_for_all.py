@@ -102,8 +102,11 @@ async def update_user_data(user_type, user_db_id, tg_user, fio):
         tg_ids = await get_active_admins_and_managers_tg_ids()
 
         for tg_id in tg_ids:
-            await bot.send_message(tg_id, f"Зарегистрирован новый {role_name}: {fio}")
-            await asyncio.sleep(0.05)
+            try:
+                await bot.send_message(tg_id, f"Зарегистрирован новый {role_name}: {fio}")
+                await asyncio.sleep(0.05)
+            except:
+                pass
 
 
 @router.message(CommandStart())
@@ -247,12 +250,15 @@ async def process_plot_input(message: Message, state: FSMContext):
         await message.answer("Заявка отправлена на модерацию")
         tg_ids = await get_active_admins_and_managers_tg_ids()
         for tg_id in tg_ids:
-            await bot.send_message(
-                tg_id,
-                text='Поступила заявка на регистрацию резидента (Регистрация > Регистрация резидентов',
-                reply_markup=admin_reply_keyboard
-            )
-            await asyncio.sleep(0.05)
+            try:
+                await bot.send_message(
+                    tg_id,
+                    text='Поступила заявка на регистрацию резидента (Регистрация > Регистрация резидентов',
+                    reply_markup=admin_reply_keyboard
+                )
+                await asyncio.sleep(0.05)
+            except:
+                pass
         await state.clear()
     except Exception as e:
         await _handle_exception(message.from_user.id, e)
@@ -301,12 +307,15 @@ async def process_position(message: Message, state: FSMContext):
         await message.answer("Заявка отправлена на модерацию!")
         tg_ids = await get_active_admins_and_managers_tg_ids()
         for tg_id in tg_ids:
-            await bot.send_message(
-                tg_id,
-                text='Поступила заявка на регистрацию подрядчика (Регистрация > Регистрация подрядчика',
-                reply_markup=admin_reply_keyboard
-            )
-            await asyncio.sleep(0.05)
+            try:
+                await bot.send_message(
+                    tg_id,
+                    text='Поступила заявка на регистрацию подрядчика (Регистрация > Регистрация подрядчика',
+                    reply_markup=admin_reply_keyboard
+                )
+                await asyncio.sleep(0.05)
+            except:
+                pass
         await state.clear()
     except Exception as e:
         await _handle_exception(message.from_user.id, e)
