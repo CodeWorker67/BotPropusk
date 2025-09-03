@@ -235,12 +235,15 @@ async def process_self_comment_and_save(message: Message, state: FSMContext):
         )
         tg_ids = await get_active_admins_managers_sb_tg_ids()
         for tg_id in tg_ids:
-            await bot.send_message(
-                tg_id,
-                text=f'Пропуск от {owner_info} на машину с номером {data["car_number"].upper()} одобрен автоматически.\n(Пропуска > Временные пропуска > Подтвержденные)',
-                reply_markup=admin_reply_keyboard
-            )
-            await asyncio.sleep(0.05)
+            try:
+                await bot.send_message(
+                    tg_id,
+                    text=f'Пропуск от {owner_info} на машину с номером {data["car_number"].upper()} одобрен автоматически.\n(Пропуска > Временные пропуска > Подтвержденные)',
+                    reply_markup=admin_reply_keyboard
+                )
+                await asyncio.sleep(0.05)
+            except:
+                pass
         await state.clear()
     except Exception as e:
         await message.answer(f"❌ Ошибка при оформлении пропуска: {str(e)}")
@@ -307,13 +310,15 @@ async def process_self_car_owner(message: Message, state: FSMContext):
         # Уведомление админов и менеджеров
         tg_ids = await get_active_admins_managers_sb_tg_ids()
         for tg_id in tg_ids:
-            await bot.send_message(
-                tg_id,
-                text=f'Постоянный пропуск от {owner_info} на машину {data["car_number"].upper()} одобрен автоматически.',
-                reply_markup=admin_reply_keyboard
-            )
-            await asyncio.sleep(0.05)
-
+            try:
+                await bot.send_message(
+                    tg_id,
+                    text=f'Постоянный пропуск от {owner_info} на машину {data["car_number"].upper()} одобрен автоматически.',
+                    reply_markup=admin_reply_keyboard
+                )
+                await asyncio.sleep(0.05)
+            except:
+                pass
         await state.clear()
     except Exception as e:
         await message.answer(f"❌ Ошибка при оформлении пропуска: {str(e)}")

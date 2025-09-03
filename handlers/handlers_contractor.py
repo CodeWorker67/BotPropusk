@@ -470,7 +470,7 @@ async def show_my_temp_passes(message: Union[Message, CallbackQuery], state: FSM
             contractor = await session.execute(
                 select(Contractor).where(Contractor.tg_id == message.from_user.id)
             )
-            resident = contractor.scalar()
+            contractor = contractor.scalar()
 
             if not contractor:
                 if isinstance(message, CallbackQuery):
