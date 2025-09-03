@@ -651,22 +651,23 @@ async def process_car_number(message: Message, state: FSMContext):
 
 
 # Обработка марки машины
-@router.message(F.text, TemporaryPassStates.INPUT_CAR_BRAND)
-async def process_car_brand(message: Message, state: FSMContext):
-    try:
-        await state.update_data(car_brand=message.text)
-        await message.answer("Укажите цель визита:")
-        await state.set_state(TemporaryPassStates.INPUT_PURPOSE)
-    except Exception as e:
-        await bot.send_message(RAZRAB, f'{message.from_user.id} - {str(e)}')
-        await asyncio.sleep(0.05)
+# @router.message(F.text, TemporaryPassStates.INPUT_CAR_BRAND)
+# async def process_car_brand(message: Message, state: FSMContext):
+#     try:
+#         await state.update_data(car_brand=message.text)
+#         await message.answer("Укажите цель визита:")
+#         await state.set_state(TemporaryPassStates.INPUT_PURPOSE)
+#     except Exception as e:
+#         await bot.send_message(RAZRAB, f'{message.from_user.id} - {str(e)}')
+#         await asyncio.sleep(0.05)
 
 
 # Обработка назначения визита
-@router.message(F.text, TemporaryPassStates.INPUT_PURPOSE)
+@router.message(F.text, TemporaryPassStates.INPUT_CAR_BRAND)
 async def process_purpose(message: Message, state: FSMContext):
     try:
-        await state.update_data(purpose=message.text)
+        await state.update_data(car_brand=message.text)
+        await state.update_data(purpose='Не указана')
         await message.answer("Введите дату приезда (в формате ДД.ММ, ДД.ММ.ГГГГ или например '5 июня'):")
         await state.set_state(TemporaryPassStates.INPUT_VISIT_DATE)
     except Exception as e:
@@ -1019,7 +1020,7 @@ async def view_my_temp_pass_details(callback: CallbackQuery):
                 f"{cargo_type}\n"
                 f"Номер: {pass_item.car_number}\n"
                 f"Марка: {pass_item.car_brand}\n"
-                f"Цель визита: {pass_item.purpose}\n"
+                # f"Цель визита: {pass_item.purpose}\n"
                 f"Дата визита: {pass_item.visit_date.strftime('%d.%m.%Y')}\n"
                 f"Комментарий: {pass_item.owner_comment or 'нет'}"
             )

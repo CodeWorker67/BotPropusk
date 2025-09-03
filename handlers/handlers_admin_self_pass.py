@@ -154,21 +154,22 @@ async def process_car_brand(message: Message, state: FSMContext):
 
 
 # Обработка марки машины
+# @router.message(F.text, TemporarySelfPassStates.INPUT_DESTINATION)
+# async def process_destination(message: Message, state: FSMContext):
+#     try:
+#         await state.update_data(destination=message.text)
+#         await message.answer("Укажите цель визита:")
+#         await state.set_state(TemporarySelfPassStates.INPUT_PURPOSE)
+#     except Exception as e:
+#         await bot.send_message(RAZRAB, f'{message.from_user.id} - {str(e)}')
+#         await asyncio.sleep(0.05)
+
+
 @router.message(F.text, TemporarySelfPassStates.INPUT_DESTINATION)
-async def process_destination(message: Message, state: FSMContext):
-    try:
-        await state.update_data(destination=message.text)
-        await message.answer("Укажите цель визита:")
-        await state.set_state(TemporarySelfPassStates.INPUT_PURPOSE)
-    except Exception as e:
-        await bot.send_message(RAZRAB, f'{message.from_user.id} - {str(e)}')
-        await asyncio.sleep(0.05)
-
-
-@router.message(F.text, TemporarySelfPassStates.INPUT_PURPOSE)
 async def process_self_purpose(message: Message, state: FSMContext):
     """Обработка цели визита"""
-    await state.update_data(purpose=message.text)
+    await state.update_data(destination=message.text)
+    await state.update_data(purpose='Не указано')
     await message.answer("Введите дату приезда (в формате ДД.ММ, ДД.ММ.ГГГГ или '5 июня'):")
     await state.set_state(TemporarySelfPassStates.INPUT_VISIT_DATE)
 
