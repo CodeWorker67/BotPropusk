@@ -83,6 +83,12 @@ def get_search_menu():
     ])
 
 
+def car_in_button(temp_id):
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🚛 Машина заехала", callback_data=f"car_in_{temp_id}")]
+    ])
+
+
 @router.callback_query(F.data == "search_pass")
 async def search_pass_menu(callback: CallbackQuery):
     try:
@@ -216,7 +222,6 @@ async def search_by_number(message: Message, state: FSMContext):
                 await message.answer(text, parse_mode="HTML")
 
 
-
             # Обработка временных пропусков резидентов
             for pass_data in temp_res_passes:
                 found = True
@@ -235,7 +240,7 @@ async def search_by_number(message: Message, state: FSMContext):
                     f"💬 Комментарий владельца: {temp_pass.owner_comment or 'нет'}\n"
                     f"📝 Комментарий для СБ: {temp_pass.security_comment or 'нет'}"
                 )
-                await message.answer(text, parse_mode="HTML")
+                await message.answer(text, parse_mode="HTML", reply_markup=car_in_button(temp_pass.id))
                 await asyncio.sleep(0.05)
 
             # Обработка временных пропусков подрядчиков
@@ -258,7 +263,7 @@ async def search_by_number(message: Message, state: FSMContext):
                     f"💬 Комментарий владельца: {temp_pass.owner_comment or 'нет'}\n"
                     f"📝 Комментарий для СБ: {temp_pass.security_comment or 'нет'}"
                 )
-                await message.answer(text, parse_mode="HTML")
+                await message.answer(text, parse_mode="HTML", reply_markup=car_in_button(temp_pass.id))
                 await asyncio.sleep(0.05)
 
             for temp_pass in temp_staff_passes:
@@ -276,7 +281,7 @@ async def search_by_number(message: Message, state: FSMContext):
                     f"💬 Комментарий владельца: {temp_pass.owner_comment or 'нет'}\n"
                     f"📝 Комментарий для СБ: {temp_pass.security_comment or 'нет'}"
                 )
-                await message.answer(text, parse_mode="HTML")
+                await message.answer(text, parse_mode="HTML", reply_markup=car_in_button(temp_pass.id))
                 await asyncio.sleep(0.05)
 
             # Формируем итоговое сообщение
@@ -441,7 +446,7 @@ async def search_by_digits(message: Message, state: FSMContext):
                     f"💬 Комментарий владельца: {temp_pass.owner_comment or 'нет'}\n"
                     f"📝 Комментарий для СБ: {temp_pass.security_comment or 'нет'}"
                 )
-                await message.answer(text, parse_mode="HTML")
+                await message.answer(text, parse_mode="HTML", reply_markup=car_in_button(temp_pass.id))
                 await asyncio.sleep(0.05)
 
             # Обработка временных пропусков подрядчиков
@@ -464,7 +469,7 @@ async def search_by_digits(message: Message, state: FSMContext):
                     f"💬 Комментарий владельца: {temp_pass.owner_comment or 'нет'}\n"
                     f"📝 Комментарий для СБ: {temp_pass.security_comment or 'нет'}"
                 )
-                await message.answer(text, parse_mode="HTML")
+                await message.answer(text, parse_mode="HTML", reply_markup=car_in_button(temp_pass.id))
                 await asyncio.sleep(0.05)
 
             for temp_pass in temp_staff_passes:
@@ -482,7 +487,7 @@ async def search_by_digits(message: Message, state: FSMContext):
                     f"💬 Комментарий владельца: {temp_pass.owner_comment or 'нет'}\n"
                     f"📝 Комментарий для СБ: {temp_pass.security_comment or 'нет'}"
                 )
-                await message.answer(text, parse_mode="HTML")
+                await message.answer(text, parse_mode="HTML", reply_markup=car_in_button(temp_pass.id))
                 await asyncio.sleep(0.05)
 
 
@@ -576,7 +581,7 @@ async def show_all_temp_passes(callback: CallbackQuery):
                     f"💬 Комментарий владельца: {temp_pass.owner_comment or 'нет'}\n"
                     f"📝 Комментарий для СБ: {temp_pass.security_comment or 'нет'}"
                 )
-                await callback.message.answer(text, parse_mode="HTML")
+                await callback.message.answer(text, parse_mode="HTML", reply_markup=car_in_button(temp_pass.id))
                 await asyncio.sleep(0.05)
 
             # Обработка пропусков подрядчиков
@@ -599,7 +604,7 @@ async def show_all_temp_passes(callback: CallbackQuery):
                     f"💬 Комментарий владельца: {temp_pass.owner_comment or 'нет'}\n"
                     f"📝 Комментарий для СБ: {temp_pass.security_comment or 'нет'}"
                 )
-                await callback.message.answer(text, parse_mode="HTML")
+                await callback.message.answer(text, parse_mode="HTML", reply_markup=car_in_button(temp_pass.id))
                 await asyncio.sleep(0.05)
 
             for temp_pass in staff_passes:
@@ -617,7 +622,7 @@ async def show_all_temp_passes(callback: CallbackQuery):
                     f"💬 Комментарий владельца: {temp_pass.owner_comment or 'нет'}\n"
                     f"📝 Комментарий для СБ: {temp_pass.security_comment or 'нет'}"
                 )
-                await callback.message.answer(text, parse_mode="HTML")
+                await callback.message.answer(text, parse_mode="HTML", reply_markup=car_in_button(temp_pass.id))
                 await asyncio.sleep(0.05)
 
             # Формируем итоговое сообщение
@@ -636,3 +641,42 @@ async def show_all_temp_passes(callback: CallbackQuery):
     except Exception as e:
         await bot.send_message(RAZRAB, f'{callback.from_user.id} - {str(e)}')
         await asyncio.sleep(0.05)
+
+
+@router.callback_query(F.data.startswith("car_in_"))
+async def car_in(callback: CallbackQuery):
+    try:
+        temp_id = int(callback.data.split("_")[-1])
+        current_time = datetime.now().strftime('%H.%M %d.%m.%Y')
+
+        async with AsyncSessionLocal() as session:
+            # Получаем запись пропуска
+            stmt = select(TemporaryPass).where(TemporaryPass.id == temp_id)
+            result = await session.execute(stmt)
+            temp_pass = result.scalar_one_or_none()
+
+            if not temp_pass:
+                await callback.answer("Пропуск не найден")
+                return
+
+            # Обновляем security_comment
+            if temp_pass.security_comment:
+                new_comment = f"{temp_pass.security_comment}\nМашина заехала в {current_time}"
+            else:
+                new_comment = f"Машина заехала в {current_time}"
+
+            temp_pass.security_comment = new_comment
+            await session.commit()
+
+            # Редактируем сообщение
+            new_text = f"Машина {temp_pass.car_brand} с номером {temp_pass.car_number} заехала в {current_time}"
+            await callback.message.edit_text(
+                text=new_text,
+                parse_mode="HTML",
+                reply_markup=None  # Убираем кнопку
+            )
+
+        await callback.answer()
+    except Exception as e:
+        await bot.send_message(RAZRAB, f'{callback.from_user.id} - {str(e)}')
+        await callback.answer("Произошла ошибка")

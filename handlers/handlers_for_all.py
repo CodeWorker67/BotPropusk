@@ -174,8 +174,12 @@ async def process_phone_input(message: Message, state: FSMContext):
                     await message.answer("Ваша заявка находится в обработке")
                     return
             data['resident_id'] = user_db.id
-            next_state = UserRegistration.INPUT_FIO
-            prompt = "Введите ФИО:"
+            if user_db.fio:
+                next_state = UserRegistration.INPUT_PLOT
+                prompt = "Введите номер участка:"
+            else:
+                next_state = UserRegistration.INPUT_FIO
+                prompt = "Введите ФИО:"
 
         elif user_type == 'contractor':
             if existing_request := await _check_existing(ContractorRegistrationRequest, 'contractor_id'):
