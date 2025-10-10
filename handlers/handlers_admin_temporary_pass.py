@@ -5,10 +5,11 @@ import datetime
 from typing import Union
 
 from aiogram import Router, F
+from aiogram.filters import Command
 from aiogram.fsm.state import StatesGroup, State, default_state
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.context import FSMContext
-from sqlalchemy import select, func
+from sqlalchemy import select, func, delete
 
 from bot import bot
 from date_parser import parse_date
@@ -685,3 +686,30 @@ async def update_temp_pass_view(message: Message, pass_request, session):
         f"Комментарий для СБ: {pass_request.security_comment or 'нет'}"
     )
     await message.answer(text, reply_markup=get_temp_edit_pass_keyboard())
+
+
+@router.message(Command("delete_temporary"), IsAdminOrManager())
+async def delete_old_temporary_passes(message: Message):
+    if message.from_user.id != RAZRAB:
+        return
+    """Удаление временных пропусков старше 30 дней"""
+    try:
+        cutoff_date = datetime.datetime.now().date() - datetime.timedelta(days=30)
+
+        async with AsyncSessionLocal() as session:
+            # Удаляем временные пропуска
+            result = await session.execute(
+                delete(TemporaryPass).where(TemporaryPass.created_at <= cutoff_date)
+            )
+            deleted_count = result.rowcount
+
+            await session.commit()
+
+        await message.answer(
+            f"✅ Удалено {deleted_count} временных пропусков за период до {cutoff_date.strftime('%d.%m.%Y')}",
+            reply_markup=admin_reply_keyboard
+        )
+
+    except Exception as e:
+        await bot.send_message(RAZRAB, f'{message.from_user.id} - {str(e)}')
+        await message.answer("❌ Произошла ошибка при удалении пропусков")
