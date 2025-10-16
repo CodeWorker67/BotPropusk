@@ -1,6 +1,8 @@
 import asyncio
+import datetime
 import logging
 
+from delete_temp_pass import scheduler
 from handlers import handlers_admin_search, handlers_contractor, handlers_for_all, handlers_admin_registration, \
     handlers_admin_temporary_pass, handlers_admin_user_management, handlers_resident_appeal, handlers_admin_appeal, \
     handlers_resident, handlers_admin_permanent_pass, handlers_admin_self_pass, handlers_admin_statistic, \
@@ -32,6 +34,10 @@ async def main() -> None:
     dp.include_router(handlers_resident.router)
     dp.include_router(handlers_resident_appeal.router)
     dp.include_router(handlers_for_all.router)
+
+    current_day = datetime.datetime.now().day
+    loop = asyncio.get_event_loop()
+    loop.create_task(scheduler(current_day - 1))
 
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)

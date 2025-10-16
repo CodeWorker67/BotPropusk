@@ -263,18 +263,6 @@ async def process_destination(message: Message, state: FSMContext):
         await asyncio.sleep(0.05)
 
 
-# Обработка марки машины
-# @router.message(F.text, TemporaryPassStates.INPUT_DESTINATION)
-# async def process_car_brand(message: Message, state: FSMContext):
-#     try:
-#         await state.update_data(destination=message.text)
-#         await message.answer("Укажите цель визита:")
-#         await state.set_state(TemporaryPassStates.INPUT_PURPOSE)
-#     except Exception as e:
-#         await bot.send_message(RAZRAB, f'{message.from_user.id} - {str(e)}')
-#         await asyncio.sleep(0.05)
-
-
 # Обработка назначения визита
 @router.message(F.text, TemporaryPassStates.INPUT_DESTINATION)
 async def process_purpose(message: Message, state: FSMContext):
@@ -309,8 +297,26 @@ async def process_visit_date(message: Message, state: FSMContext):
         return
 
     await state.update_data(visit_date=visit_date)
-    await message.answer("Добавьте комментарий (если не требуется, напишите 'нет'):")
-    await state.set_state(TemporaryPassStates.INPUT_COMMENT)
+    keyboard_ = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="2", callback_data="days_2"),
+         InlineKeyboardButton(text="7", callback_data="days_7")],
+        [InlineKeyboardButton(text="14", callback_data="days_14"),
+         InlineKeyboardButton(text="30", callback_data="days_30")]
+    ])
+    await message.answer("Выберите кол-во дней действия пропуска:", reply_markup=keyboard_)
+    await state.set_state(TemporaryPassStates.INPUT_PURPOSE)
+
+
+@router.callback_query(F.data.startswith("days_"), TemporaryPassStates.INPUT_PURPOSE)
+async def process_days(callback: CallbackQuery, state: FSMContext):
+    try:
+        days = int(callback.data.split('_')[1])
+        await state.update_data(days=days)
+        await callback.message.answer("Добавьте комментарий (если не требуется, напишите 'нет'):")
+        await state.set_state(TemporaryPassStates.INPUT_COMMENT)
+    except Exception as e:
+        await bot.send_message(RAZRAB, f'{callback.from_user.id} - {str(e)}')
+        await asyncio.sleep(0.05)
 
 
 # Обработка комментария и сохранение данных
@@ -342,6 +348,7 @@ async def process_comment_and_save(message: Message, state: FSMContext):
             ])
             await message.answer("✅ Заявка на временный пропуск отправлена на рассмотрение!", reply_markup=keyboard)
             # Проверка лимитов для легковых автомобилей
+            count = 0
             if data['vehicle_type'] == 'car':
                 # Получаем все подходящие пропуска
                 await asyncio.sleep(random.randint(180, 720))
@@ -350,12 +357,17 @@ async def process_comment_and_save(message: Message, state: FSMContext):
                         TemporaryPass.contractor_id == contractor.id,
                         TemporaryPass.vehicle_type == 'car',
                         TemporaryPass.status == 'approved',
-                        TemporaryPass.visit_date <= new_end_date,  # Проверка начала существующего <= конца нового
-                        func.date(TemporaryPass.visit_date, f'+{PASS_TIME} days') >= new_visit_date
-                        # Проверка конца существующего >= начала нового
+                        TemporaryPass.visit_date <= new_end_date  # Проверка начала существующего <= конца нового
                     )
                 )
-                count = len(result.scalars().all())
+                for temp_pass in result.scalars().all():
+                    days_ = temp_pass.purpose
+                    days = 2
+                    if days_.isdigit():
+                        days = int(days_)
+                    old_end_date = temp_pass.visit_date + datetime.timedelta(days=days)
+                    if old_end_date >= new_visit_date:
+                        count += 1
                 if count < MAX_CAR_PASSES:
                     status = "approved"
 
@@ -370,12 +382,17 @@ async def process_comment_and_save(message: Message, state: FSMContext):
                         TemporaryPass.contractor_id == contractor.id,
                         TemporaryPass.vehicle_type == 'truck',
                         TemporaryPass.status == 'approved',
-                        TemporaryPass.visit_date <= new_end_date,  # Проверка начала существующего <= конца нового
-                        func.date(TemporaryPass.visit_date, f'+{PASS_TIME} days') >= new_visit_date
-                        # Проверка конца существующего >= начала нового
+                        TemporaryPass.visit_date <= new_end_date  # Проверка начала существующего <= конца нового
                     )
                 )
-                count = len(result.scalars().all())
+                for temp_pass in result.scalars().all():
+                    days_ = temp_pass.purpose
+                    days = 2
+                    if days_.isdigit():
+                        days = int(days_)
+                    old_end_date = temp_pass.visit_date + datetime.timedelta(days=days)
+                    if old_end_date >= new_visit_date:
+                        count += 1
                 if count < MAX_TRUCK_PASSES:
                     status = "approved"
 
@@ -389,7 +406,7 @@ async def process_comment_and_save(message: Message, state: FSMContext):
                 car_number=data.get("car_number").upper(),
                 car_brand=data.get("car_brand"),
                 cargo_type=data.get("cargo_type"),
-                purpose=data.get("purpose"),
+                purpose=str(data.get("days")),
                 destination=data.get("destination"),
                 visit_date=new_visit_date,
                 owner_comment=comment,
@@ -626,7 +643,10 @@ async def view_my_temp_pass_details(callback: CallbackQuery):
                 weight_category = "\nТоннаж: " + ("≤ 12 тонн" if pass_item.weight_category == "light" else "> 12 тонн")
                 length_category = "\nДлина: " + ("≤ 7 метров" if pass_item.length_category == "short" else "> 7 метров")
                 cargo_type = f"\n{pass_item.cargo_type}"
-
+            if pass_item.purpose in ['7', '14', '30']:
+                value = f'{pass_item.purpose} дней\n'
+            else:
+                value = '2 дня\n'
             text = (
                 f"Статус: {status_text}\n"
                 f"Тип ТС: {vehicle_type}"
@@ -638,6 +658,7 @@ async def view_my_temp_pass_details(callback: CallbackQuery):
                 f"Пункт назначения: {pass_item.destination}\n"
                 # f"Цель визита: {pass_item.purpose}\n"
                 f"Дата визита: {pass_item.visit_date.strftime('%d.%m.%Y')}\n"
+                f"Действие пропуска: {value}"
                 f"Комментарий: {pass_item.owner_comment or 'нет'}"
             )
 

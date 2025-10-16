@@ -219,7 +219,10 @@ async def view_temp_pass_details(callback: CallbackQuery, state: FSMContext):
                 return
 
             owner_info = await get_pass_owner_info(session, pass_request)
-
+            if pass_request.purpose in ['7', '14', '30']:
+                value = f'{pass_request.purpose} дней\n'
+            else:
+                value = '2 дня\n'
             # Формируем текст сообщения
             text = (
                 f"{owner_info}\n"
@@ -232,6 +235,7 @@ async def view_temp_pass_details(callback: CallbackQuery, state: FSMContext):
                 f"Пункт назначения: {pass_request.destination}\n"
                 # f"Цель визита: {pass_request.purpose}\n"
                 f"Дата визита: {pass_request.visit_date.strftime('%d.%m.%Y')}\n"
+                f"Действие пропуска: {value}"
                 f"Комментарий владельца: {pass_request.owner_comment or 'нет'}\n"
                 f"Комментарий для СБ: {pass_request.security_comment or 'нет'}\n"
                 f"Время создания: {pass_request.created_at.strftime('%d.%m.%Y %H:%M')}"
@@ -439,7 +443,10 @@ async def finish_editing_temp_pass(callback: CallbackQuery, state: FSMContext):
         async with AsyncSessionLocal() as session:
             pass_request = await session.get(TemporaryPass, pass_id)
             owner_info = await get_pass_owner_info(session, pass_request)
-
+            if pass_request.purpose in ['7', '14', '30']:
+                value = f'{pass_request.purpose} дней\n'
+            else:
+                value = '2 дня\n'
             text = (
                 f"{owner_info}\n"
                 f"Тип ТС: {'Легковой' if pass_request.vehicle_type == 'car' else 'Грузовой'}\n"
@@ -449,6 +456,7 @@ async def finish_editing_temp_pass(callback: CallbackQuery, state: FSMContext):
                 f"Пункт назначения: {pass_request.destination}\n"
                 # f"Цель визита: {pass_request.purpose}\n"
                 f"Дата визита: {pass_request.visit_date.strftime('%d.%m.%Y')}\n"
+                f"Действие пропуска: {value}"
                 f"Комментарий владельца: {pass_request.owner_comment or 'нет'}\n"
                 f"Комментарий для СБ: {pass_request.security_comment or 'нет'}"
             )
@@ -673,6 +681,10 @@ async def update_temp_security_comment(message: Message, state: FSMContext):
 
 async def update_temp_pass_view(message: Message, pass_request, session):
     owner_info = await get_pass_owner_info(session, pass_request)
+    if pass_request.purpose in ['7', '14', '30']:
+        value = f'{pass_request.purpose} дней\n'
+    else:
+        value = '2 дня\n'
     text = (
         f"{owner_info}\n"
         f"Тип ТС: {'Легковой' if pass_request.vehicle_type == 'car' else 'Грузовой'}\n"
@@ -682,6 +694,7 @@ async def update_temp_pass_view(message: Message, pass_request, session):
         f"Пункт назначения: {pass_request.destination}\n"
         # f"Цель визита: {pass_request.purpose}\n"
         f"Дата визита: {pass_request.visit_date.strftime('%d.%m.%Y')}\n"
+        f"Действие пропуска: {value}"
         f"Комментарий владельца: {pass_request.owner_comment or 'нет'}\n"
         f"Комментарий для СБ: {pass_request.security_comment or 'нет'}"
     )

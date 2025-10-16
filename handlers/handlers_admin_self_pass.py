@@ -153,18 +153,6 @@ async def process_car_brand(message: Message, state: FSMContext):
         await asyncio.sleep(0.05)
 
 
-# Обработка марки машины
-# @router.message(F.text, TemporarySelfPassStates.INPUT_DESTINATION)
-# async def process_destination(message: Message, state: FSMContext):
-#     try:
-#         await state.update_data(destination=message.text)
-#         await message.answer("Укажите цель визита:")
-#         await state.set_state(TemporarySelfPassStates.INPUT_PURPOSE)
-#     except Exception as e:
-#         await bot.send_message(RAZRAB, f'{message.from_user.id} - {str(e)}')
-#         await asyncio.sleep(0.05)
-
-
 @router.message(F.text, TemporarySelfPassStates.INPUT_DESTINATION)
 async def process_self_purpose(message: Message, state: FSMContext):
     """Обработка цели визита"""
@@ -195,8 +183,26 @@ async def process_self_visit_date(message: Message, state: FSMContext):
         return
 
     await state.update_data(visit_date=visit_date)
-    await message.answer("Добавьте комментарий (если не требуется, напишите 'нет'):")
-    await state.set_state(TemporarySelfPassStates.INPUT_COMMENT)
+    keyboard_ = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="2", callback_data="days_2"),
+         InlineKeyboardButton(text="7", callback_data="days_7")],
+        [InlineKeyboardButton(text="14", callback_data="days_14"),
+         InlineKeyboardButton(text="30", callback_data="days_30")]
+    ])
+    await message.answer("Выберите кол-во дней действия пропуска:", reply_markup=keyboard_)
+    await state.set_state(TemporarySelfPassStates.INPUT_PURPOSE)
+
+
+@router.callback_query(F.data.startswith("days_"), TemporarySelfPassStates.INPUT_PURPOSE)
+async def process_days(callback: CallbackQuery, state: FSMContext):
+    try:
+        days = int(callback.data.split('_')[1])
+        await state.update_data(days=days)
+        await callback.message.answer("Добавьте комментарий (если не требуется, напишите 'нет'):")
+        await state.set_state(TemporarySelfPassStates.INPUT_COMMENT)
+    except Exception as e:
+        await bot.send_message(RAZRAB, f'{callback.from_user.id} - {str(e)}')
+        await asyncio.sleep(0.05)
 
 
 @router.message(F.text, TemporarySelfPassStates.INPUT_COMMENT)
@@ -218,7 +224,7 @@ async def process_self_comment_and_save(message: Message, state: FSMContext):
                 car_number=data["car_number"].upper(),
                 car_brand=data["car_brand"],
                 cargo_type=data.get("cargo_type"),
-                purpose=data["purpose"],
+                purpose=str(data.get("days")),
                 destination=data["destination"],
                 visit_date=data["visit_date"],
                 owner_comment=comment,
