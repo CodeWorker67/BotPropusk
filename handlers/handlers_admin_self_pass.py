@@ -184,10 +184,10 @@ async def process_self_visit_date(message: Message, state: FSMContext):
 
     await state.update_data(visit_date=visit_date)
     keyboard_ = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="2", callback_data="days_2"),
-         InlineKeyboardButton(text="7", callback_data="days_7")],
-        [InlineKeyboardButton(text="14", callback_data="days_14"),
-         InlineKeyboardButton(text="30", callback_data="days_30")]
+        [InlineKeyboardButton(text="2", callback_data="days_1"),
+         InlineKeyboardButton(text="7", callback_data="days_6")],
+        [InlineKeyboardButton(text="14", callback_data="days_13"),
+         InlineKeyboardButton(text="30", callback_data="days_29")]
     ])
     await message.answer("Выберите кол-во дней действия пропуска:", reply_markup=keyboard_)
     await state.set_state(TemporarySelfPassStates.INPUT_PURPOSE)

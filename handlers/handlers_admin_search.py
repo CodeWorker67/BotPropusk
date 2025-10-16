@@ -108,7 +108,7 @@ async def search_by_number(message: Message, state: FSMContext):
             for res_pass in temp_res_result:
                 temp_pass, fio, plot_number = res_pass
                 days_ = temp_pass.purpose
-                days = 2
+                days = 1
                 if days_.isdigit():
                     days = int(days_)
                 old_end_date = temp_pass.visit_date + timedelta(days=days)
@@ -134,7 +134,7 @@ async def search_by_number(message: Message, state: FSMContext):
             for contr_pass in temp_contr_result:
                 temp_pass, fio, company, position = contr_pass
                 days_ = temp_pass.purpose
-                days = 2
+                days = 1
                 if days_.isdigit():
                     days = int(days_)
                 old_end_date = temp_pass.visit_date + timedelta(days=days)
@@ -154,7 +154,7 @@ async def search_by_number(message: Message, state: FSMContext):
             temp_staff_passes = []
             for staff_pass in temp_staff_result.scalars().all():
                 days_ = staff_pass.purpose
-                days = 2
+                days = 1
                 if days_.isdigit():
                     days = int(days_)
                 old_end_date = staff_pass.visit_date + timedelta(days=days)
@@ -202,12 +202,12 @@ async def search_by_number(message: Message, state: FSMContext):
             for pass_data in temp_res_passes:
                 found = True
                 temp_pass, fio, plot_number = pass_data
-                days = 2
+                days = 1
                 days_ = temp_pass.purpose
                 if days_.isdigit():
                     days = int(days_)
-                if temp_pass.purpose in ['7', '14', '30']:
-                    value = f'{temp_pass.purpose} дней\n'
+                if temp_pass.purpose in ['6', '13', '29']:
+                    value = f'{int(temp_pass.purpose) + 1} дней\n'
                 else:
                     value = '2 дня\n'
                 text = (
@@ -232,12 +232,12 @@ async def search_by_number(message: Message, state: FSMContext):
             for pass_data in temp_contr_passes:
                 found = True
                 temp_pass, fio, company, position = pass_data
-                days = 2
+                days = 1
                 days_ = temp_pass.purpose
                 if days_.isdigit():
                     days = int(days_)
-                if temp_pass.purpose in ['7', '14', '30']:
-                    value = f'{temp_pass.purpose} дней\n'
+                if temp_pass.purpose in ['6', '13', '29']:
+                    value = f'{int(temp_pass.purpose) + 1} дней\n'
                 else:
                     value = '2 дня\n'
                 text = (
@@ -262,12 +262,12 @@ async def search_by_number(message: Message, state: FSMContext):
 
             for temp_pass in temp_staff_passes:
                 found = True
-                days = 2
+                days = 1
                 days_ = temp_pass.purpose
                 if days_.isdigit():
                     days = int(days_)
-                if temp_pass.purpose in ['7', '14', '30']:
-                    value = f'{temp_pass.purpose} дней\n'
+                if temp_pass.purpose in ['6', '13', '29']:
+                    value = f'{int(temp_pass.purpose) + 1} дней\n'
                 else:
                     value = '2 дня\n'
                 text = (
@@ -371,7 +371,7 @@ async def search_by_digits(message: Message, state: FSMContext):
             for res_pass in temp_res_result:
                 temp_pass, fio, plot_number = res_pass
                 days_ = temp_pass.purpose
-                days = 2
+                days = 1
                 if days_.isdigit():
                     days = int(days_)
                 old_end_date = temp_pass.visit_date + timedelta(days=days)
@@ -399,7 +399,7 @@ async def search_by_digits(message: Message, state: FSMContext):
             for contr_pass in temp_contr_result:
                 temp_pass, fio, company, position = contr_pass
                 days_ = temp_pass.purpose
-                days = 2
+                days = 1
                 if days_.isdigit():
                     days = int(days_)
                 old_end_date = temp_pass.visit_date + timedelta(days=days)
@@ -419,7 +419,7 @@ async def search_by_digits(message: Message, state: FSMContext):
             temp_staff_passes = []
             for staff_pass in temp_staff_result.scalars().all():
                 days_ = staff_pass.purpose
-                days = 2
+                days = 1
                 if days_.isdigit():
                     days = int(days_)
                 old_end_date = staff_pass.visit_date + timedelta(days=days)
@@ -466,12 +466,12 @@ async def search_by_digits(message: Message, state: FSMContext):
             for pass_data in temp_res_passes:
                 found = True
                 temp_pass, fio, plot_number = pass_data
-                days = 2
+                days = 1
                 days_ = temp_pass.purpose
                 if days_.isdigit():
                     days = int(days_)
-                if temp_pass.purpose in ['7', '14', '30']:
-                    value = f'{temp_pass.purpose} дней\n'
+                if temp_pass.purpose in ['6', '13', '29']:
+                    value = f'{int(temp_pass.purpose) + 1} дней\n'
                 else:
                     value = '2 дня\n'
                 text = (
@@ -496,12 +496,12 @@ async def search_by_digits(message: Message, state: FSMContext):
             for pass_data in temp_contr_passes:
                 found = True
                 temp_pass, fio, company, position = pass_data
-                days = 2
+                days = 1
                 days_ = temp_pass.purpose
                 if days_.isdigit():
                     days = int(days_)
-                if temp_pass.purpose in ['7', '14', '30']:
-                    value = f'{temp_pass.purpose} дней\n'
+                if temp_pass.purpose in ['6', '13', '29']:
+                    value = f'{int(temp_pass.purpose) + 1} дней\n'
                 else:
                     value = '2 дня\n'
                 text = (
@@ -526,12 +526,12 @@ async def search_by_digits(message: Message, state: FSMContext):
 
             for temp_pass in temp_staff_passes:
                 found = True
-                days = 2
+                days = 1
                 days_ = temp_pass.purpose
                 if days_.isdigit():
                     days = int(days_)
-                if temp_pass.purpose in ['7', '14', '30']:
-                    value = f'{temp_pass.purpose} дней\n'
+                if temp_pass.purpose in ['6', '13', '29']:
+                    value = f'{int(temp_pass.purpose) + 1} дней\n'
                 else:
                     value = '2 дня\n'
                 text = (
@@ -602,7 +602,7 @@ async def show_all_temp_passes(callback: CallbackQuery):
             for res_pass in temp_res_result:
                 temp_pass, fio, plot_number = res_pass
                 days_ = temp_pass.purpose
-                days = 2
+                days = 1
                 if days_.isdigit():
                     days = int(days_)
                 old_end_date = temp_pass.visit_date + timedelta(days=days)
@@ -628,7 +628,7 @@ async def show_all_temp_passes(callback: CallbackQuery):
             for contr_pass in temp_contr_result:
                 temp_pass, fio, company, position = contr_pass
                 days_ = temp_pass.purpose
-                days = 2
+                days = 1
                 if days_.isdigit():
                     days = int(days_)
                 old_end_date = temp_pass.visit_date + timedelta(days=days)
@@ -647,7 +647,7 @@ async def show_all_temp_passes(callback: CallbackQuery):
             staff_passes = []
             for staff_pass in staff_result.scalars().all():
                 days_ = staff_pass.purpose
-                days = 2
+                days = 1
                 if days_.isdigit():
                     days = int(days_)
                 old_end_date = staff_pass.visit_date + timedelta(days=days)
@@ -660,12 +660,12 @@ async def show_all_temp_passes(callback: CallbackQuery):
             for pass_data in res_passes:
                 found = True
                 temp_pass, fio, plot_number = pass_data
-                days = 2
+                days = 1
                 days_ = temp_pass.purpose
                 if days_.isdigit():
                     days = int(days_)
-                if temp_pass.purpose in ['7', '14', '30']:
-                    value = f'{temp_pass.purpose} дней\n'
+                if temp_pass.purpose in ['6', '13', '29']:
+                    value = f'{int(temp_pass.purpose) + 1} дней\n'
                 else:
                     value = '2 дня\n'
                 text = (
@@ -690,12 +690,12 @@ async def show_all_temp_passes(callback: CallbackQuery):
             for pass_data in contr_passes:
                 found = True
                 temp_pass, fio, company, position = pass_data
-                days = 2
+                days = 1
                 days_ = temp_pass.purpose
                 if days_.isdigit():
                     days = int(days_)
-                if temp_pass.purpose in ['7', '14', '30']:
-                    value = f'{temp_pass.purpose} дней\n'
+                if temp_pass.purpose in ['6', '13', '29']:
+                    value = f'{int(temp_pass.purpose) + 1} дней\n'
                 else:
                     value = '2 дня\n'
                 text = (
@@ -720,12 +720,12 @@ async def show_all_temp_passes(callback: CallbackQuery):
 
             for temp_pass in staff_passes:
                 found = True
-                days = 2
+                days = 1
                 days_ = temp_pass.purpose
                 if days_.isdigit():
                     days = int(days_)
-                if temp_pass.purpose in ['7', '14', '30']:
-                    value = f'{temp_pass.purpose} дней\n'
+                if temp_pass.purpose in ['6', '13', '29']:
+                    value = f'{int(temp_pass.purpose) + 1} дней\n'
                 else:
                     value = '2 дня\n'
                 text = (

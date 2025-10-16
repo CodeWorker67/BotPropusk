@@ -298,10 +298,10 @@ async def process_visit_date(message: Message, state: FSMContext):
 
     await state.update_data(visit_date=visit_date)
     keyboard_ = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="2", callback_data="days_2"),
-         InlineKeyboardButton(text="7", callback_data="days_7")],
-        [InlineKeyboardButton(text="14", callback_data="days_14"),
-         InlineKeyboardButton(text="30", callback_data="days_30")]
+        [InlineKeyboardButton(text="2", callback_data="days_1"),
+         InlineKeyboardButton(text="7", callback_data="days_6")],
+        [InlineKeyboardButton(text="14", callback_data="days_13"),
+         InlineKeyboardButton(text="30", callback_data="days_29")]
     ])
     await message.answer("Выберите кол-во дней действия пропуска:", reply_markup=keyboard_)
     await state.set_state(TemporaryPassStates.INPUT_PURPOSE)
@@ -362,7 +362,7 @@ async def process_comment_and_save(message: Message, state: FSMContext):
                 )
                 for temp_pass in result.scalars().all():
                     days_ = temp_pass.purpose
-                    days = 2
+                    days = 1
                     if days_.isdigit():
                         days = int(days_)
                     old_end_date = temp_pass.visit_date + datetime.timedelta(days=days)
@@ -387,7 +387,7 @@ async def process_comment_and_save(message: Message, state: FSMContext):
                 )
                 for temp_pass in result.scalars().all():
                     days_ = temp_pass.purpose
-                    days = 2
+                    days = 1
                     if days_.isdigit():
                         days = int(days_)
                     old_end_date = temp_pass.visit_date + datetime.timedelta(days=days)
@@ -643,8 +643,8 @@ async def view_my_temp_pass_details(callback: CallbackQuery):
                 weight_category = "\nТоннаж: " + ("≤ 12 тонн" if pass_item.weight_category == "light" else "> 12 тонн")
                 length_category = "\nДлина: " + ("≤ 7 метров" if pass_item.length_category == "short" else "> 7 метров")
                 cargo_type = f"\n{pass_item.cargo_type}"
-            if pass_item.purpose in ['7', '14', '30']:
-                value = f'{pass_item.purpose} дней\n'
+            if pass_item.purpose in ['6', '13', '29']:
+                value = f'{int(pass_item.purpose) + 1} дней\n'
             else:
                 value = '2 дня\n'
             text = (

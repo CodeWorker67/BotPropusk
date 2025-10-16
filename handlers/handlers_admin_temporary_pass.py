@@ -219,8 +219,8 @@ async def view_temp_pass_details(callback: CallbackQuery, state: FSMContext):
                 return
 
             owner_info = await get_pass_owner_info(session, pass_request)
-            if pass_request.purpose in ['7', '14', '30']:
-                value = f'{pass_request.purpose} дней\n'
+            if pass_request.purpose in ['6', '13', '29']:
+                value = f'{int(pass_request.purpose) + 1} дней\n'
             else:
                 value = '2 дня\n'
             # Формируем текст сообщения
@@ -443,8 +443,8 @@ async def finish_editing_temp_pass(callback: CallbackQuery, state: FSMContext):
         async with AsyncSessionLocal() as session:
             pass_request = await session.get(TemporaryPass, pass_id)
             owner_info = await get_pass_owner_info(session, pass_request)
-            if pass_request.purpose in ['7', '14', '30']:
-                value = f'{pass_request.purpose} дней\n'
+            if pass_request.purpose in ['6', '13', '29']:
+                value = f'{int(pass_request.purpose) + 1} дней\n'
             else:
                 value = '2 дня\n'
             text = (
@@ -681,8 +681,8 @@ async def update_temp_security_comment(message: Message, state: FSMContext):
 
 async def update_temp_pass_view(message: Message, pass_request, session):
     owner_info = await get_pass_owner_info(session, pass_request)
-    if pass_request.purpose in ['7', '14', '30']:
-        value = f'{pass_request.purpose} дней\n'
+    if pass_request.purpose in ['6', '13', '29']:
+        value = f'{int(pass_request.purpose) + 1} дней\n'
     else:
         value = '2 дня\n'
     text = (
