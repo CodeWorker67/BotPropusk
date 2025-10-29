@@ -17,7 +17,7 @@ from config import PAGE_SIZE, RAZRAB, PASS_TIME, MAX_CAR_PASSES, MAX_TRUCK_PASSE
 from date_parser import parse_date
 from db.models import Resident, AsyncSessionLocal, ResidentContractorRequest, PermanentPass, Contractor, TemporaryPass, \
     ContractorContractorRequest
-from db.util import get_active_admins_and_managers_tg_ids, get_active_admins_managers_sb_tg_ids
+from db.util import get_active_admins_and_managers_tg_ids, get_active_admins_managers_sb_tg_ids, text_warning
 from filters import IsResident, IsContractor
 from handlers.handlers_admin_user_management import admin_reply_keyboard
 
@@ -419,6 +419,7 @@ async def process_comment_and_save(message: Message, state: FSMContext):
             await session.commit()
         if status == "approved":
             await message.answer(f"✅ Ваш временный пропуск одобрен на машину с номером {data.get('car_number').upper()}", reply_markup=keyboard)
+            await message.answer(text_warning)
             tg_ids = await get_active_admins_managers_sb_tg_ids()
             for tg_id in tg_ids:
                 try:

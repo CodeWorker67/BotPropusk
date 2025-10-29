@@ -15,7 +15,7 @@ from bot import bot
 from date_parser import parse_date
 from db.models import AsyncSessionLocal, Resident, Contractor, TemporaryPass
 from config import ADMIN_IDS, PAGE_SIZE, RAZRAB
-from db.util import get_active_admins_managers_sb_tg_ids
+from db.util import get_active_admins_managers_sb_tg_ids, text_warning
 from filters import IsAdminOrManager
 from handlers.handlers_admin_user_management import admin_reply_keyboard
 from handlers.handlers_admin_permanent_pass import passes_menu
@@ -310,6 +310,7 @@ async def approve_temp_pass(callback: CallbackQuery, state: FSMContext):
                         f"✅ Ваш временный пропуск на машину {pass_request.car_brand} {pass_request.car_number} одобрен!\n"
                         f"Дата визита: {pass_request.visit_date.strftime('%d.%m.%Y')}"
                     )
+                    await bot.send_message(owner_id, text_warning)
             except Exception as e:
                 logging.error(f"Не удалось отправить сообщение владельцу: {e}")
 
