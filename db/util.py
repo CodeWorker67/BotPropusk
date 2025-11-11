@@ -2,9 +2,10 @@ import datetime
 import re
 
 from sqlalchemy import select, insert, update
+from sqlalchemy.orm import Session
 
 from config import ADMIN_IDS
-from db.models import User, AsyncSessionLocal, Manager, Security
+from db.models import User, AsyncSessionLocal, Manager, Security, Resident, Contractor
 
 
 async def add_user_to_db(user_id, username, first_name, last_name, time_start):
@@ -121,3 +122,58 @@ text_warning = '''
 
 С уважением, УК Ели Estate 🌲
 '''
+
+
+async def get_all_users_unblock(status: str) -> list:
+    """
+    Получает список Telegram ID пользователей в зависимости от статуса
+
+    Args:
+        status:
+            'users_1' - резиденты со статусом True
+            'users_2' - подрядчики со статусом True
+            'users_3' - резиденты и подрядчики со статусом True
+
+    Returns:
+        list: Список Telegram ID
+    """
+    async with AsyncSessionLocal() as session:
+        if status == 'users_1':
+            # Резиденты со статусом True
+            query = select(Resident.tg_id).where(
+                Resident.status == True
+            )
+            result = await session.execute(query)
+            resident_ids = result.scalars().all()
+            return list(resident_ids)
+
+        elif status == 'users_2':
+            # Подрядчики со статусом True
+            query = select(Contractor.tg_id).where(
+                Contractor.status == True
+            )
+            result = await session.execute(query)
+            contractor_ids = result.scalars().all()
+            return list(contractor_ids)
+
+        elif status == 'users_3':
+            # Резиденты и подрядчики со статусом True
+            resident_query = select(Resident.tg_id).where(
+                Resident.status == True
+            )
+            contractor_query = select(Contractor.tg_id).where(
+                Contractor.status == True
+            )
+
+            resident_result = await session.execute(resident_query)
+            contractor_result = await session.execute(contractor_query)
+
+            resident_ids = resident_result.scalars().all()
+            contractor_ids = contractor_result.scalars().all()
+
+            # Объединяем и убираем дубликаты
+            all_ids = set(resident_ids) | set(contractor_ids)
+            return list(all_ids)
+
+        else:
+            return []
