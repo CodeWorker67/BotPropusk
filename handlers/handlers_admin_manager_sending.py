@@ -9,6 +9,7 @@ from aiogram.fsm.state import StatesGroup, State, default_state
 from bot import bot
 from db.util import get_all_users_unblock
 from filters import IsAdminOrManager
+from handlers.handlers_admin_user_management import get_admin_menu
 from keyboard import create_kb, kb_button
 
 router: Router = Router()
@@ -84,7 +85,7 @@ async def check_text_yes_1(cb: types.CallbackQuery, state: FSMContext):
             count += 1
         except Exception as e:
             print(e)
-    await cb.message.answer(text=f'Сообщение отправлено {count} юзерам')
+    await cb.message.answer(text=f'Сообщение отправлено {count} юзерам', reply_markup=get_admin_menu())
     await state.set_state(default_state)
     await state.clear()
 
@@ -128,14 +129,14 @@ async def check_text_yes_2(cb: types.CallbackQuery, state: FSMContext):
             count += 1
         except Exception as e:
             print(e)
-    await cb.message.answer(text=f'Сообщение отправлено {count} юзерам')
+    await cb.message.answer(text=f'Сообщение отправлено {count} юзерам', reply_markup=get_admin_menu())
     await state.set_state(default_state)
     await state.clear()
 
 
 @router.callback_query(F.data == 'no', StateFilter(FSMFillForm.check_text_1, FSMFillForm.check_text_2))
 async def check_message_no(cb: types.CallbackQuery, state: FSMContext):
-    await cb.message.answer(text=f'Сообщение не отправлено')
+    await cb.message.answer(text=f'Сообщение не отправлено', reply_markup=get_admin_menu())
     await state.set_state(default_state)
     await state.clear()
 
@@ -181,7 +182,7 @@ async def check_photo_yes_1(cb: types.CallbackQuery, state: FSMContext):
             count += 1
         except Exception as e:
             print(e)
-    await cb.message.answer(text=f'Сообщение отправлено {count} юзерам')
+    await cb.message.answer(text=f'Сообщение отправлено {count} юзерам', reply_markup=get_admin_menu())
     await state.set_state(default_state)
     await state.clear()
 
@@ -232,7 +233,7 @@ async def check_photo_yes_2(cb: types.CallbackQuery, state: FSMContext):
             await asyncio.sleep(0.2)
         except Exception as e:
             print(e)
-    await cb.message.answer(text=f'Сообщение отправлено {count} юзерам')
+    await cb.message.answer(text=f'Сообщение отправлено {count} юзерам', reply_markup=get_admin_menu())
     await state.set_state(default_state)
     await state.clear()
 
@@ -240,7 +241,7 @@ async def check_photo_yes_2(cb: types.CallbackQuery, state: FSMContext):
 @router.callback_query(F.data == 'no', StateFilter(FSMFillForm.check_text_1, FSMFillForm.check_text_2,
             FSMFillForm.check_photo_1, FSMFillForm.check_photo_2))
 async def check_message_no(cb: types.CallbackQuery, state: FSMContext):
-    await cb.message.answer(text=f'Сообщение не отправлено')
+    await cb.message.answer(text=f'Сообщение не отправлено', reply_markup=get_admin_menu())
     await state.set_state(default_state)
     await state.clear()
 
@@ -296,7 +297,7 @@ async def check_video_yes_1(cb: types.CallbackQuery, state: FSMContext):
             await asyncio.sleep(0.2)
         except Exception as e:
             print(e)
-    await cb.message.answer(text=f'Сообщение отправлено {count} юзерам')
+    await cb.message.answer(text=f'Сообщение отправлено {count} юзерам', reply_markup=get_admin_menu())
     await state.set_state(default_state)
     await state.clear()
 
@@ -347,7 +348,7 @@ async def check_video_yes_2(cb: types.CallbackQuery, state: FSMContext):
             await asyncio.sleep(0.2)
         except Exception as e:
             pass
-    await cb.message.answer(text=f'Сообщение отправлено {count} юзерам')
+    await cb.message.answer(text=f'Сообщение отправлено {count} юзерам', reply_markup=get_admin_menu())
     await state.set_state(default_state)
     await state.clear()
 
@@ -359,6 +360,6 @@ async def check_video_yes_2(cb: types.CallbackQuery, state: FSMContext):
                        FSMFillForm.check_photo_1, FSMFillForm.check_photo_2, FSMFillForm.check_video_1,
                        FSMFillForm.check_video_2))
 async def check_message_no(cb: types.CallbackQuery, state: FSMContext):
-    await cb.message.answer(text=f'Сообщение не отправлено')
+    await cb.message.answer(text=f'Сообщение не отправлено', reply_markup=get_admin_menu())
     await state.set_state(default_state)
     await state.clear()
