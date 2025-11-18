@@ -722,10 +722,14 @@ async def approve_resident_request(callback: CallbackQuery, state: FSMContext):
         async with AsyncSessionLocal() as session:
             request = await session.get(ResidentContractorRequest, request_id)
             resident = await session.get(Resident, request.resident_id)
-
+            phone = ''
+            phone_ = request.phone
+            for p in phone_:
+                if p.isdigit() or p == '+':
+                    phone += p
             # Создаем запись подрядчика
             new_contractor = Contractor(
-                phone=request.phone,
+                phone=phone.replace('+7', '8'),
                 work_types=request.work_types,
                 affiliation=f"{resident.id}_{resident.fio}",
                 status=False  # Требует завершения регистрации

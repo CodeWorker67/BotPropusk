@@ -18,7 +18,7 @@ from date_parser import parse_date
 from db.models import Resident, AsyncSessionLocal, ResidentContractorRequest, PermanentPass, TemporaryPass
 from db.util import get_active_admins_and_managers_tg_ids, get_active_admins_managers_sb_tg_ids, text_warning
 from filters import IsResident
-from handlers.handlers_admin_user_management import admin_reply_keyboard
+from handlers.handlers_admin_user_management import admin_reply_keyboard, is_valid_phone
 
 router = Router()
 router.message.filter(IsResident())  # Применяем фильтр резидентства ко всем хендлерам сообщений
@@ -159,6 +159,10 @@ async def start_contractor_registration(callback: CallbackQuery, state: FSMConte
 @router.message(F.text, ResidentContractorRegistration.INPUT_PHONE)
 async def process_contractor_phone(message: Message, state: FSMContext):
     try:
+        phone = message.text
+        if not is_valid_phone(phone):
+            await message.answer('Телефон должен быть в формате 8XXXXXXXXXX.\nПопробуйте ввести еще раз!')
+            return
         await state.update_data(phone=message.text)
         await message.answer("Укажите виды выполняемых работ:")
         await state.set_state(ResidentContractorRegistration.INPUT_WORK_TYPES)
