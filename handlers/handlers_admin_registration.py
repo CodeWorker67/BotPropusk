@@ -669,7 +669,7 @@ async def show_resident_contractor_requests(callback: CallbackQuery):
                 buttons.append(
                     [InlineKeyboardButton(
                         text=f"{resident.fio}",
-                        callback_data=f"view_resident_request_{req.id}"
+                        callback_data=f"view_rescont_request_{req.id}"
                     )]
                 )
 
@@ -685,7 +685,7 @@ async def show_resident_contractor_requests(callback: CallbackQuery):
         await asyncio.sleep(0.05)
 
 
-@router.callback_query(F.data.startswith("view_resident_request_"))
+@router.callback_query(F.data.startswith("view_rescont_request_"))
 async def view_resident_request(callback: CallbackQuery, state: FSMContext):
     try:
         request_id = int(callback.data.split("_")[-1])
@@ -702,8 +702,8 @@ async def view_resident_request(callback: CallbackQuery, state: FSMContext):
             )
 
             keyboard = InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="✅ Одобрить", callback_data="approve_resident_request")],
-                [InlineKeyboardButton(text="❌ Отклонить", callback_data="reject_resident_request")]
+                [InlineKeyboardButton(text="✅ Одобрить", callback_data="approve_rescont_request")],
+                [InlineKeyboardButton(text="❌ Отклонить", callback_data="reject_rescont_request")]
             ])
 
             await callback.message.edit_text(text, reply_markup=keyboard)
@@ -713,7 +713,7 @@ async def view_resident_request(callback: CallbackQuery, state: FSMContext):
 
 
 # Одобрение заявки
-@router.callback_query(F.data == "approve_resident_request")
+@router.callback_query(F.data == "approve_rescont_request")
 async def approve_resident_request(callback: CallbackQuery, state: FSMContext):
     try:
         data = await state.get_data()
@@ -753,7 +753,7 @@ async def approve_resident_request(callback: CallbackQuery, state: FSMContext):
         await asyncio.sleep(0.05)
 
 
-@router.callback_query(F.data == "reject_resident_request")
+@router.callback_query(F.data == "reject_rescont_request")
 async def reject_resident_request(callback: CallbackQuery, state: FSMContext):
     try:
         await callback.message.answer("Введите причину отклонения:")
