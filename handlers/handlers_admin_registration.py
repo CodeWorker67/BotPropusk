@@ -727,9 +727,12 @@ async def approve_resident_request(callback: CallbackQuery, state: FSMContext):
             for p in phone_:
                 if p.isdigit() or p == '+':
                     phone += p
+            phone = phone.replace('+7', '8')
+            if phone[0] == 7:
+                phone = '8' + phone[1:]
             # Создаем запись подрядчика
             new_contractor = Contractor(
-                phone=phone.replace('+7', '8'),
+                phone=phone,
                 work_types=request.work_types,
                 affiliation=f"{resident.id}_{resident.fio}",
                 status=False  # Требует завершения регистрации
