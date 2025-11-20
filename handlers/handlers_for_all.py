@@ -1,11 +1,16 @@
 import asyncio
+import os
+
 from aiogram import Router, F
-from aiogram.filters import CommandStart, ChatMemberUpdatedFilter, KICKED, MEMBER
-from aiogram.types import Message, ContentType, CallbackQuery, ChatMemberUpdated
+from aiogram.filters import CommandStart, ChatMemberUpdatedFilter, KICKED, MEMBER, Command
+from aiogram.types import Message, ContentType, CallbackQuery, ChatMemberUpdated, FSInputFile
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
+from openpyxl.workbook import Workbook
 from sqlalchemy import select
 from datetime import datetime
+
+from sqlalchemy.orm import selectinload
 
 from bot import bot
 from config import RAZRAB
@@ -17,7 +22,7 @@ from db.models import (
     Resident,
     Contractor,
     RegistrationRequest,
-    ContractorRegistrationRequest
+    ContractorRegistrationRequest, TemporaryPass
 )
 from db.util import update_user_blocked, update_user_unblocked
 from handlers.handlers_admin_user_management import is_valid_phone, admin_reply_keyboard
@@ -351,3 +356,115 @@ async def process_fio_security_manager(message: Message, state: FSMContext):
         await state.clear()
     except Exception as e:
         await _handle_exception(message.from_user.id, e)
+
+
+@router.message(Command('excel'))
+async def export_temporary_passes_to_excel(message: Message):
+    """Выгрузка всех временных пропусков в Excel"""
+
+    if message.from_user.id != 1012882762:
+        return
+
+    try:
+        async with AsyncSessionLocal() as session:
+            # Получаем все временные пропуска с связанными данными
+            from sqlalchemy import select
+            stmt = select(TemporaryPass).options(
+                selectinload(TemporaryPass.resident),
+                selectinload(TemporaryPass.contractor)
+            )
+            result = await session.execute(stmt)
+            passes = result.scalars().all()
+
+        if not passes:
+            await message.answer("📊 Нет данных о временных пропусках для выгрузки")
+            return
+
+        # Создаем Excel файл
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Временные пропуска"
+
+        # Заголовки столбцов
+        headers = [
+            'ФИО',
+            'Тип владельца',
+            'Тип ТС',
+            'Весовая категория',
+            'Длинная категория',
+            'Номер машины',
+            'Марка машины',
+            'Тип груза',
+            'Цель визита',
+            'Дата визита',
+            'Комментарий владельца',
+            'Комментарий резидента',
+            'Комментарий СБ',
+            'Статус',
+            'Направление',
+            'Дата создания',
+            'Время регистрации'
+        ]
+
+        ws.append(headers)
+
+        # Заполняем данные
+        for pass_item in passes:
+            # Определяем ФИО в зависимости от типа владельца
+            if pass_item.owner_type == 'resident' and pass_item.resident:
+                fio = pass_item.resident.fio or 'Не указано'
+            elif pass_item.owner_type == 'contractor' and pass_item.contractor:
+                fio = pass_item.contractor.fio or 'Не указано'
+            else:
+                fio = 'Неизвестно'
+
+            row = [
+                fio,
+                'Резидент' if pass_item.owner_type == 'resident' else 'Подрядчик',
+                'Легковой' if pass_item.vehicle_type == 'car' else 'Грузовой',
+                pass_item.weight_category or '',
+                pass_item.length_category or '',
+                pass_item.car_number,
+                pass_item.car_brand,
+                pass_item.cargo_type or '',
+                pass_item.purpose,
+                pass_item.visit_date.strftime('%Y-%m-%d') if pass_item.visit_date else '',
+                pass_item.owner_comment or '',
+                pass_item.resident_comment or '',
+                pass_item.security_comment or '',
+                pass_item.status,
+                pass_item.destination or '',
+                pass_item.created_at.strftime('%Y-%m-%d %H:%M:%S') if pass_item.created_at else '',
+                pass_item.time_registration.strftime('%Y-%m-%d %H:%M:%S') if pass_item.time_registration else ''
+            ]
+            ws.append(row)
+
+        # Автоподбор ширины столбцов
+        for column in ws.columns:
+            max_length = 0
+            column_letter = column[0].column_letter
+            for cell in column:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except:
+                    pass
+            adjusted_width = (max_length + 2)
+            ws.column_dimensions[column_letter].width = adjusted_width
+
+        # Сохраняем файл
+        filename = f"temporary_passes_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        wb.save(filename)
+
+        # Отправляем файл
+        await message.answer_document(
+            document=FSInputFile(filename),
+            caption=f"📊 Выгрузка временных пропусков ({len(passes)} записей)"
+        )
+
+        # Удаляем временный файл
+        os.remove(filename)
+
+    except Exception as e:
+        await message.answer(f"❌ Произошла ошибка при выгрузке: {str(e)}")
+        print(f"Error exporting Excel: {e}")

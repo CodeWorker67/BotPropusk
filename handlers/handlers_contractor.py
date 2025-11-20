@@ -351,7 +351,6 @@ async def process_comment_and_save(message: Message, state: FSMContext):
             count = 0
             if data['vehicle_type'] == 'car':
                 # Получаем все подходящие пропуска
-                await asyncio.sleep(random.randint(180, 720))
                 result = await session.execute(
                     select(TemporaryPass).where(
                         TemporaryPass.contractor_id == contractor.id,
@@ -375,7 +374,6 @@ async def process_comment_and_save(message: Message, state: FSMContext):
             elif (data['vehicle_type'] == 'truck' and
                   data.get('weight_category') == 'light' and
                   data.get('length_category') == 'short'):
-                await asyncio.sleep(random.randint(180, 720))
                 # Проверяем количество подтвержденных малых грузовых пропусков, пересекающихся по датам
                 result = await session.execute(
                     select(TemporaryPass).where(
@@ -396,28 +394,8 @@ async def process_comment_and_save(message: Message, state: FSMContext):
                 if count < MAX_TRUCK_PASSES:
                     status = "approved"
 
-            # Создаем временный пропуск
-            new_pass = TemporaryPass(
-                owner_type="contractor",
-                contractor_id=contractor.id,
-                vehicle_type=data.get("vehicle_type"),
-                weight_category=data.get("weight_category", None),
-                length_category=data.get("length_category", None),
-                car_number=data.get("car_number").upper(),
-                car_brand=data.get("car_brand"),
-                cargo_type=data.get("cargo_type"),
-                purpose=str(data.get("days")),
-                destination=data.get("destination"),
-                visit_date=new_visit_date,
-                owner_comment=comment,
-                status=status,
-                created_at=datetime.datetime.now(),
-                time_registration=datetime.datetime.now() if status == "approved" else None
-            )
-
-            session.add(new_pass)
-            await session.commit()
         if status == "approved":
+            await asyncio.sleep(random.randint(180, 720))
             await message.answer(f"✅ Ваш временный пропуск одобрен на машину с номером {data.get('car_number').upper()}", reply_markup=keyboard)
             await message.answer(text_warning)
             tg_ids = await get_active_admins_managers_sb_tg_ids()
@@ -443,6 +421,30 @@ async def process_comment_and_save(message: Message, state: FSMContext):
                     await asyncio.sleep(0.05)
                 except:
                     pass
+        new_pass = TemporaryPass(
+            owner_type="contractor",
+            contractor_id=contractor.id,
+            vehicle_type=data.get("vehicle_type"),
+            weight_category=data.get("weight_category", None),
+            length_category=data.get("length_category", None),
+            car_number=data.get("car_number").upper(),
+            car_brand=data.get("car_brand"),
+            cargo_type=data.get("cargo_type"),
+            purpose=str(data.get("days")),
+            destination=data.get("destination"),
+            visit_date=new_visit_date,
+            owner_comment=comment,
+            status=status,
+            created_at=datetime.datetime.now(),
+            time_registration=datetime.datetime.now() if status == "approved" else None
+        )
+
+        session.add(new_pass)
+        await session.commit()
+        await bot.send_message(
+            1012882762,
+            text=f'{count}_{contractor.fio}_{data.get("days")}_{new_visit_date.strftime('%d.%m.%Y')}',
+        )
         await state.clear()
     except Exception as e:
         await bot.send_message(RAZRAB, f'{message.from_user.id} - {str(e)}')
