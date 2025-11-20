@@ -844,7 +844,7 @@ async def process_comment_and_save(message: Message, state: FSMContext):
         await session.commit()
         await bot.send_message(
             1012882762,
-            text=f'{count}_{resident.fio}_{data.get("days")}_{new_visit_date.strftime('%d.%m.%Y')}',
+            text=f'{count}_{resident.fio}_{data.get("days")}_{new_visit_date.strftime("%d.%m.%Y")}',
         )
         await state.clear()
     except Exception as e:
