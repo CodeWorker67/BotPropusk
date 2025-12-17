@@ -298,6 +298,7 @@ async def process_visit_date(message: Message, state: FSMContext):
 
     await state.update_data(visit_date=visit_date)
     keyboard_ = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="1", callback_data="days_0")],
         [InlineKeyboardButton(text="2", callback_data="days_1"),
          InlineKeyboardButton(text="7", callback_data="days_6")],
         [InlineKeyboardButton(text="14", callback_data="days_13"),

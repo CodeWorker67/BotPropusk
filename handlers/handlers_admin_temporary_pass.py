@@ -221,8 +221,10 @@ async def view_temp_pass_details(callback: CallbackQuery, state: FSMContext):
             owner_info = await get_pass_owner_info(session, pass_request)
             if pass_request.purpose in ['6', '13', '29']:
                 value = f'{int(pass_request.purpose) + 1} дней\n'
-            else:
+            elif pass_request.purpose == '1':
                 value = '2 дня\n'
+            else:
+                value = '1 день\n'
             # Формируем текст сообщения
             text = (
                 f"{owner_info}\n"
@@ -446,8 +448,10 @@ async def finish_editing_temp_pass(callback: CallbackQuery, state: FSMContext):
             owner_info = await get_pass_owner_info(session, pass_request)
             if pass_request.purpose in ['6', '13', '29']:
                 value = f'{int(pass_request.purpose) + 1} дней\n'
-            else:
+            elif pass_request.purpose == '1':
                 value = '2 дня\n'
+            else:
+                value = '1 день\n'
             text = (
                 f"{owner_info}\n"
                 f"Тип ТС: {'Легковой' if pass_request.vehicle_type == 'car' else 'Грузовой'}\n"
@@ -684,8 +688,10 @@ async def update_temp_pass_view(message: Message, pass_request, session):
     owner_info = await get_pass_owner_info(session, pass_request)
     if pass_request.purpose in ['6', '13', '29']:
         value = f'{int(pass_request.purpose) + 1} дней\n'
-    else:
+    elif pass_request.purpose == '1':
         value = '2 дня\n'
+    else:
+        value = '1 день\n'
     text = (
         f"{owner_info}\n"
         f"Тип ТС: {'Легковой' if pass_request.vehicle_type == 'car' else 'Грузовой'}\n"

@@ -208,8 +208,10 @@ async def search_by_number(message: Message, state: FSMContext):
                     days = int(days_)
                 if temp_pass.purpose in ['6', '13', '29']:
                     value = f'{int(temp_pass.purpose) + 1} дней\n'
-                else:
+                elif temp_pass.purpose == '1':
                     value = '2 дня\n'
+                else:
+                    value = '1 день\n'
                 text = (
                     "⏳ <b>Временный пропуск резидента</b>\n\n"
                     f"👤 ФИО резидента: {fio}\n"
@@ -238,8 +240,10 @@ async def search_by_number(message: Message, state: FSMContext):
                     days = int(days_)
                 if temp_pass.purpose in ['6', '13', '29']:
                     value = f'{int(temp_pass.purpose) + 1} дней\n'
-                else:
+                elif temp_pass.purpose == '1':
                     value = '2 дня\n'
+                else:
+                    value = '1 день\n'
                 text = (
                     "⏳ <b>Временный пропуск подрядчика</b>\n\n"
                     f"👷 ФИО подрядчика: {fio}\n"
@@ -268,8 +272,10 @@ async def search_by_number(message: Message, state: FSMContext):
                     days = int(days_)
                 if temp_pass.purpose in ['6', '13', '29']:
                     value = f'{int(temp_pass.purpose) + 1} дней\n'
-                else:
+                elif temp_pass.purpose == '1':
                     value = '2 дня\n'
+                else:
+                    value = '1 день\n'
                 text = (
                     "⏳ <b>Временный пропуск от представителя УК</b>\n\n"
                     f"🚗 Тип ТС: {'Легковой' if temp_pass.vehicle_type == 'car' else 'Грузовой'}\n"
@@ -472,8 +478,10 @@ async def search_by_digits(message: Message, state: FSMContext):
                     days = int(days_)
                 if temp_pass.purpose in ['6', '13', '29']:
                     value = f'{int(temp_pass.purpose) + 1} дней\n'
-                else:
+                elif temp_pass.purpose == '1':
                     value = '2 дня\n'
+                else:
+                    value = '1 день\n'
                 text = (
                     "⏳ <b>Временный пропуск резидента</b>\n\n"
                     f"👤 ФИО резидента: {fio}\n"
@@ -502,8 +510,10 @@ async def search_by_digits(message: Message, state: FSMContext):
                     days = int(days_)
                 if temp_pass.purpose in ['6', '13', '29']:
                     value = f'{int(temp_pass.purpose) + 1} дней\n'
-                else:
+                elif temp_pass.purpose == '1':
                     value = '2 дня\n'
+                else:
+                    value = '1 день\n'
                 text = (
                     "⏳ <b>Временный пропуск подрядчика</b>\n\n"
                     f"👷 ФИО подрядчика: {fio}\n"
@@ -532,8 +542,10 @@ async def search_by_digits(message: Message, state: FSMContext):
                     days = int(days_)
                 if temp_pass.purpose in ['6', '13', '29']:
                     value = f'{int(temp_pass.purpose) + 1} дней\n'
-                else:
+                elif temp_pass.purpose == '1':
                     value = '2 дня\n'
+                else:
+                    value = '1 день\n'
                 text = (
                     "⏳ <b>Временный пропуск от представителя УК</b>\n\n"
                     f"🚗 Тип ТС: {'Легковой' if temp_pass.vehicle_type == 'car' else 'Грузовой'}\n"
@@ -696,8 +708,10 @@ async def show_all_temp_passes(callback: CallbackQuery):
                     days = int(days_)
                 if temp_pass.purpose in ['6', '13', '29']:
                     value = f'{int(temp_pass.purpose) + 1} дней\n'
-                else:
+                elif temp_pass.purpose == '1':
                     value = '2 дня\n'
+                else:
+                    value = '1 день\n'
                 text = (
                     "⏳ <b>Временный пропуск подрядчика</b>\n\n"
                     f"👷 ФИО подрядчика: {fio}\n"
@@ -726,8 +740,10 @@ async def show_all_temp_passes(callback: CallbackQuery):
                     days = int(days_)
                 if temp_pass.purpose in ['6', '13', '29']:
                     value = f'{int(temp_pass.purpose) + 1} дней\n'
-                else:
+                elif temp_pass.purpose == '1':
                     value = '2 дня\n'
+                else:
+                    value = '1 день\n'
                 text = (
                     "⏳ <b>Временный пропуск от представителя УК</b>\n\n"
                     f"🚗 Тип ТС: {'Легковой' if temp_pass.vehicle_type == 'car' else 'Грузовой'}\n"
