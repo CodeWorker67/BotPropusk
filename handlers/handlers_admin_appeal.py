@@ -186,11 +186,13 @@ async def view_appeal_details(callback: CallbackQuery, state: FSMContext):
             if not appeal:
                 await callback.answer("Обращение не найдено")
                 return
+            resident = await session.get(Resident, appeal.resident_id)
 
             # Для активных обращений
             if not appeal.status:
                 text = (
                     f"<b>Обращение #{appeal.id}</b>\n\n"
+                    f"<b>ФИО резидента:</b>\n{resident.fio}\n\n"
                     f"<b>Текст обращения:</b>\n{appeal.request_text}\n\n"
                     f"<b>Дата обращения:</b>\n{appeal.created_at.strftime('%d.%m.%Y')}"
                 )
@@ -204,7 +206,6 @@ async def view_appeal_details(callback: CallbackQuery, state: FSMContext):
 
             # Для закрытых обращений
             else:
-                resident = await session.get(Resident, appeal.resident_id)
                 responser = await session.get(User, appeal.responser_id)
 
                 text = (
