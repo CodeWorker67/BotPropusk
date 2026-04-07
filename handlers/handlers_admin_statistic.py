@@ -10,7 +10,15 @@ from openpyxl.workbook import Workbook
 from sqlalchemy import select, func
 
 from bot import bot
-from db.models import AsyncSessionLocal, Resident, Contractor, PermanentPass, TemporaryPass
+from db.models import (
+    AsyncSessionLocal,
+    Resident,
+    Contractor,
+    PermanentPass,
+    TemporaryPass,
+    Manager,
+    Security,
+)
 from config import ADMIN_IDS, RAZRAB
 from filters import IsAdminOrManager
 
@@ -146,6 +154,53 @@ async def export_statistics_to_xlsx(callback: CallbackQuery):
                 ws_contr.append([
                     contr.id, contr.phone, contr.fio, contr.company,
                     contr.position, contr.tg_id, "Активен" if contr.status else "Неактивен"
+                ])
+
+            def _dt(v):
+                return v.strftime("%Y-%m-%d %H:%M:%S") if v else ""
+
+            # Лист: Менеджеры
+            ws_mgr = wb.create_sheet("Менеджеры")
+            managers = await session.execute(select(Manager))
+            ws_mgr.append([
+                "ID", "Стартовый ключ", "Телефон", "ФИО", "TG ID", "Username",
+                "Имя TG", "Фамилия TG", "Добавлен в БД", "Регистрация", "Статус",
+            ])
+            for mgr in managers.scalars():
+                ws_mgr.append([
+                    mgr.id,
+                    mgr.start_key,
+                    mgr.phone,
+                    mgr.fio,
+                    mgr.tg_id,
+                    mgr.username,
+                    mgr.first_name,
+                    mgr.last_name,
+                    _dt(mgr.time_add_to_db),
+                    _dt(mgr.time_registration),
+                    "Активен" if mgr.status else "Неактивен",
+                ])
+
+            # Лист: СБ
+            ws_sec = wb.create_sheet("СБ")
+            securities = await session.execute(select(Security))
+            ws_sec.append([
+                "ID", "Стартовый ключ", "Телефон", "ФИО", "TG ID", "Username",
+                "Имя TG", "Фамилия TG", "Добавлен в БД", "Регистрация", "Статус",
+            ])
+            for sec in securities.scalars():
+                ws_sec.append([
+                    sec.id,
+                    sec.start_key,
+                    sec.phone,
+                    sec.fio,
+                    sec.tg_id,
+                    sec.username,
+                    sec.first_name,
+                    sec.last_name,
+                    _dt(sec.time_add_to_db),
+                    _dt(sec.time_registration),
+                    "Активен" if sec.status else "Неактивен",
                 ])
 
             # Лист: Постоянные пропуска
