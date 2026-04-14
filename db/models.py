@@ -1,4 +1,4 @@
-from sqlalchemy import BigInteger, String, Boolean, ForeignKey
+from sqlalchemy import BigInteger, String, Boolean, ForeignKey, Integer, Text
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase, mapped_column, Mapped, relationship
 import atexit
@@ -195,13 +195,26 @@ class TemporaryPass(Base):
     owner_comment: Mapped[str] = mapped_column(nullable=True)
     resident_comment: Mapped[str] = mapped_column(nullable=True)
     security_comment: Mapped[str] = mapped_column(nullable=True)
-    status: Mapped[str] = mapped_column(default='pending')  # pending/approved/rejected
+    status: Mapped[str] = mapped_column(default='pending')  # pending/awaiting_payment/approved/rejected
     destination: Mapped[str] = mapped_column(nullable=True)
     created_at: Mapped[datetime.datetime] = mapped_column(default=datetime.datetime.now)
     time_registration: Mapped[datetime.datetime] = mapped_column(nullable=True)
 
     resident = relationship("Resident")
     contractor = relationship("Contractor")
+
+
+class TempPassYooKassaPayment(Base):
+    __tablename__ = 'temp_pass_yookassa_payment'
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    temporary_pass_id: Mapped[int] = mapped_column(ForeignKey('temporary_pass.id'), nullable=False)
+    yookassa_payment_id: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    amount_kopeks: Mapped[int] = mapped_column(Integer, nullable=False)
+    status: Mapped[str] = mapped_column(String(32), default='pending')
+    confirmation_url: Mapped[str] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime.datetime] = mapped_column(default=datetime.datetime.now)
+    paid_at: Mapped[datetime.datetime] = mapped_column(nullable=True)
 
 
 class Appeal(Base):

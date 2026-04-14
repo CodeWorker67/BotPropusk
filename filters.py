@@ -13,6 +13,11 @@ from db.models import (
 )
 
 
+class IsAdmin(BaseFilter):
+    async def __call__(self, event: Union[Message, CallbackQuery]) -> bool:
+        return event.from_user.id in ADMIN_IDS
+
+
 class IsAdminOrManager(BaseFilter):
     async def __call__(self, event: Union[Message, CallbackQuery]) -> bool:
         user_id = event.from_user.id

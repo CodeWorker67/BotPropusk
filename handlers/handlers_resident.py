@@ -12,8 +12,21 @@ from aiogram.fsm.context import FSMContext
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
 from sqlalchemy import select, func, or_, and_
 
+from temporary_truck import (
+    PAYLOAD_PREFIX_RC,
+    category_from_truck_callback_data,
+    is_new_truck_pass,
+    temp_pass_duration_label,
+    truck_category_markup,
+)
+from truck_yookassa_flow import (
+    NewTruckPassPaymentForm,
+    create_awaiting_payment_truck_pass,
+    send_truck_payment_message,
+)
+
 from bot import bot
-from config import PAGE_SIZE, PASS_TIME, MAX_CAR_PASSES, MAX_TRUCK_PASSES, RAZRAB
+from config import PAGE_SIZE, PASS_TIME, MAX_CAR_PASSES, MAX_TRUCK_PASSES, RAZRAB, TRUCK_CATEGORIES_PHOTO_FILE_ID
 from date_parser import parse_date
 from db.models import Resident, AsyncSessionLocal, ResidentContractorRequest, PermanentPass, TemporaryPass
 from db.util import get_active_admins_and_managers_tg_ids, get_active_admins_managers_sb_tg_ids, text_warning
@@ -53,6 +66,11 @@ class TemporaryPassStates(StatesGroup):
     CHOOSE_VEHICLE_TYPE = State()
     CHOOSE_WEIGHT_CATEGORY = State()
     CHOOSE_LENGTH_CATEGORY = State()
+    CHOOSE_TRUCK_CATEGORY = State()
+    INPUT_TRUCK_BRAND = State()
+    INPUT_TRUCK_NUMBER = State()
+    INPUT_TRUCK_COMMENT = State()
+    INPUT_TRUCK_VISIT_DATE = State()
     INPUT_CAR_NUMBER = State()
     INPUT_CAR_BRAND = State()
     INPUT_CARGO_TYPE = State()
@@ -591,19 +609,153 @@ async def process_vehicle_type(callback: CallbackQuery, state: FSMContext):
         await state.update_data(vehicle_type=vehicle_type)
 
         if vehicle_type == "truck":
-            # Для грузовиков запрашиваем тоннаж
-            keyboard = InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="≤ 12 тонн", callback_data="weight_light")],
-                [InlineKeyboardButton(text="> 12 тонн", callback_data="weight_heavy")]
-            ])
-            await callback.message.answer("Выберите тоннаж:", reply_markup=keyboard)
-            await state.set_state(TemporaryPassStates.CHOOSE_WEIGHT_CATEGORY)
+            kb = truck_category_markup(PAYLOAD_PREFIX_RC)
+            cap = "Выберите тип машины:"
+            if TRUCK_CATEGORIES_PHOTO_FILE_ID:
+                await callback.message.answer_photo(
+                    photo=TRUCK_CATEGORIES_PHOTO_FILE_ID,
+                    caption=cap,
+                    reply_markup=kb,
+                )
+            else:
+                await callback.message.answer(cap, reply_markup=kb)
+            await state.set_state(TemporaryPassStates.CHOOSE_TRUCK_CATEGORY)
         else:
-            # Для легковых сразу переходим к номеру
             await callback.message.answer("Введите номер машины:")
             await state.set_state(TemporaryPassStates.INPUT_CAR_NUMBER)
     except Exception as e:
         await bot.send_message(RAZRAB, f'{callback.from_user.id} - {str(e)}')
+        await asyncio.sleep(0.05)
+
+
+@router.callback_query(
+    TemporaryPassStates.CHOOSE_TRUCK_CATEGORY,
+    F.data.startswith(f"{PAYLOAD_PREFIX_RC}_"),
+)
+async def process_truck_category_resident(callback: CallbackQuery, state: FSMContext):
+    try:
+        label = category_from_truck_callback_data(callback.data or "", PAYLOAD_PREFIX_RC)
+        if not label:
+            await callback.answer()
+            return
+        await state.update_data(weight_category=label)
+        await callback.message.answer("Введите марку машины:")
+        await state.set_state(TemporaryPassStates.INPUT_TRUCK_BRAND)
+        await callback.answer()
+    except Exception as e:
+        await bot.send_message(RAZRAB, f'{callback.from_user.id} - {str(e)}')
+        await asyncio.sleep(0.05)
+
+
+@router.message(F.text, TemporaryPassStates.INPUT_TRUCK_BRAND)
+async def process_truck_brand_resident(message: Message, state: FSMContext):
+    try:
+        await state.update_data(car_brand=message.text)
+        await message.answer("Введите номер машины:")
+        await state.set_state(TemporaryPassStates.INPUT_TRUCK_NUMBER)
+    except Exception as e:
+        await bot.send_message(RAZRAB, f'{message.from_user.id} - {str(e)}')
+        await asyncio.sleep(0.05)
+
+
+@router.message(F.text, TemporaryPassStates.INPUT_TRUCK_NUMBER)
+async def process_truck_number_resident(message: Message, state: FSMContext):
+    try:
+        await state.update_data(car_number=message.text)
+        await message.answer("Добавьте комментарий (если не требуется, напишите 'нет'):")
+        await state.set_state(TemporaryPassStates.INPUT_TRUCK_COMMENT)
+    except Exception as e:
+        await bot.send_message(RAZRAB, f'{message.from_user.id} - {str(e)}')
+        await asyncio.sleep(0.05)
+
+
+@router.message(F.text, TemporaryPassStates.INPUT_TRUCK_COMMENT)
+async def process_truck_comment_resident(message: Message, state: FSMContext):
+    try:
+        c = (message.text or "").strip()
+        comment = None if not c or c.lower() == "нет" else c
+        await state.update_data(owner_comment=comment)
+        await message.answer(
+            "Введите дату приезда (в формате ДД.ММ, ДД.ММ.ГГГГ или например '5 июня'):",
+        )
+        await state.set_state(TemporaryPassStates.INPUT_TRUCK_VISIT_DATE)
+    except Exception as e:
+        await bot.send_message(RAZRAB, f'{message.from_user.id} - {str(e)}')
+        await asyncio.sleep(0.05)
+
+
+@router.message(F.text, TemporaryPassStates.INPUT_TRUCK_VISIT_DATE)
+async def process_truck_visit_date_resident(message: Message, state: FSMContext):
+    try:
+        user_input = (message.text or "").strip()
+        visit_date = parse_date(user_input)
+        now = datetime.datetime.now().date()
+
+        if not visit_date:
+            await message.answer(
+                "❌ Неверный формат даты! Введите в формате ДД.ММ, ДД.ММ.ГГГГ или например '5 июня'",
+            )
+            return
+
+        if visit_date < now:
+            await message.answer("Дата не может быть меньше текущей даты. Введите снова:")
+            return
+
+        max_date = now + datetime.timedelta(days=31)
+        if visit_date > max_date:
+            await message.answer("Пропуск нельзя заказать на месяц вперед. Введите снова:")
+            return
+
+        data = await state.get_data()
+        uid = message.from_user.id
+
+        async with AsyncSessionLocal() as session:
+            resident = (
+                await session.execute(select(Resident).where(Resident.tg_id == uid))
+            ).scalar()
+            if not resident:
+                await message.answer("❌ Резидент не найден")
+                await state.clear()
+                return
+            plot = resident.plot_number
+            resident_id = resident.id
+            payer_phone = resident.phone
+
+        form = NewTruckPassPaymentForm(
+            weight_category=data.get("weight_category") or "",
+            car_brand=data.get("car_brand") or "",
+            car_number=(data.get("car_number") or "").upper(),
+            owner_comment=data.get("owner_comment"),
+            visit_date=visit_date,
+            days_key="0",
+            destination=plot,
+        )
+
+        created = await create_awaiting_payment_truck_pass(
+            owner_type="resident",
+            tg_user_id=uid,
+            resident_id=resident_id,
+            contractor_id=None,
+            form=form,
+        )
+        await state.clear()
+        if not created:
+            await message.answer(
+                "❌ Не удалось создать платёж. Проверьте телефон в профиле (формат 8XXXXXXXXXX), "
+                "настройки ЮKassa в .env или попробуйте позже.",
+            )
+            return
+        _pass_id, pay_row_id, conf_url = created
+        await send_truck_payment_message(
+            chat_id=uid,
+            form=form,
+            confirmation_url=conf_url,
+            local_payment_row_id=pay_row_id,
+            bot=bot,
+            payer_phone=payer_phone,
+        )
+    except Exception as e:
+        await bot.send_message(RAZRAB, f'{message.from_user.id} - {str(e)}')
         await asyncio.sleep(0.05)
 
 
@@ -908,12 +1060,20 @@ async def show_my_temp_passes(message: Union[Message, CallbackQuery], state: FSM
                     await message.answer("❌ Резидент не найден")
                 return
 
+            if status == "pending":
+                st_cond = or_(
+                    TemporaryPass.status == "pending",
+                    TemporaryPass.status == "awaiting_payment",
+                )
+            else:
+                st_cond = TemporaryPass.status == status
+
             # Получаем общее количество пропусков
             total_count = await session.scalar(
                 select(func.count(TemporaryPass.id))
                 .where(
                     TemporaryPass.resident_id == resident.id,
-                    TemporaryPass.status == status
+                    st_cond,
                 )
             )
 
@@ -922,7 +1082,7 @@ async def show_my_temp_passes(message: Union[Message, CallbackQuery], state: FSM
                 select(TemporaryPass)
                 .where(
                     TemporaryPass.resident_id == resident.id,
-                    TemporaryPass.status == status
+                    st_cond,
                 )
                 .order_by(TemporaryPass.created_at.desc())
                 .offset(page * PAGE_SIZE)
@@ -1031,40 +1191,52 @@ async def view_my_temp_pass_details(callback: CallbackQuery):
                 await callback.answer("Пропуск не найден")
                 return
 
-            # Формируем текст
             status_text = {
                 'pending': "⏳ На рассмотрении",
+                'awaiting_payment': "💳 Ожидание оплаты",
                 'approved': "✅ Подтвержден",
                 'rejected': "❌ Отклонен"
             }.get(pass_item.status, "")
 
-            # Определяем тип ТС
-            vehicle_type = "Легковая" if pass_item.vehicle_type == "car" else "Грузовая"
-            weight_category = ""
-            length_category = ""
-            cargo_type = ""
-
-            if pass_item.vehicle_type == "truck":
-                weight_category = "\nТоннаж: " + ("≤ 12 тонн" if pass_item.weight_category == "light" else "> 12 тонн")
-                length_category = "\nДлина: " + ("≤ 7 метров" if pass_item.length_category == "short" else "> 7 метров")
-                cargo_type = f"\n{pass_item.cargo_type}"
-            if pass_item.purpose in ['6', '13', '29']:
-                value = f'{int(pass_item.purpose) + 1} дней\n'
+            if is_new_truck_pass(pass_item):
+                text = (
+                    f"Статус: {status_text}\n"
+                    f"Тип ТС: Грузовая\n"
+                    f"Категория: {pass_item.weight_category or ''}\n"
+                    f"Марка: {pass_item.car_brand}\n"
+                    f"Номер: {pass_item.car_number}\n"
+                    f"Дата визита: {pass_item.visit_date.strftime('%d.%m.%Y')}\n"
+                    f"Длительность: {temp_pass_duration_label(pass_item.purpose).strip()}\n"
+                    f"Комментарий владельца: {pass_item.owner_comment or 'нет'}"
+                )
             else:
-                value = '2 дня\n'
-            text = (
-                f"Статус: {status_text}\n"
-                f"Тип ТС: {vehicle_type}"
-                f"{weight_category}"
-                f"{length_category}"
-                f"{cargo_type}\n"
-                f"Номер: {pass_item.car_number}\n"
-                f"Марка: {pass_item.car_brand}\n"
-                # f"Цель визита: {pass_item.purpose}\n"
-                f"Дата начала визита: {pass_item.visit_date.strftime('%d.%m.%Y')}\n"
-                f"Действие пропуска: {value}"
-                f"Комментарий: {pass_item.owner_comment or 'нет'}"
-            )
+                vehicle_type = "Легковая" if pass_item.vehicle_type == "car" else "Грузовая"
+                weight_category = ""
+                length_category = ""
+                cargo_type = ""
+
+                if pass_item.vehicle_type == "truck":
+                    weight_category = "\nТоннаж: " + ("≤ 12 тонн" if pass_item.weight_category == "light" else "> 12 тонн")
+                    length_category = "\nДлина: " + ("≤ 7 метров" if pass_item.length_category == "short" else "> 7 метров")
+                    cargo_type = f"\n{pass_item.cargo_type}"
+                if pass_item.purpose in ['6', '13', '29']:
+                    value = f'{int(pass_item.purpose) + 1} дней\n'
+                elif pass_item.purpose == '1':
+                    value = '2 дня\n'
+                else:
+                    value = '1 день\n'
+                text = (
+                    f"Статус: {status_text}\n"
+                    f"Тип ТС: {vehicle_type}"
+                    f"{weight_category}"
+                    f"{length_category}"
+                    f"{cargo_type}\n"
+                    f"Номер: {pass_item.car_number}\n"
+                    f"Марка: {pass_item.car_brand}\n"
+                    f"Дата начала визита: {pass_item.visit_date.strftime('%d.%m.%Y')}\n"
+                    f"Действие пропуска: {value}"
+                    f"Комментарий: {pass_item.owner_comment or 'нет'}"
+                )
 
             if pass_item.status == 'rejected' and pass_item.resident_comment:
                 text += f"\n\nПричина отклонения:\n{pass_item.resident_comment}"

@@ -1,5 +1,8 @@
 import asyncio
+import html as html_lib
 from datetime import datetime, timedelta
+
+from temporary_truck import approved_temp_search_card_html
 
 from aiogram import Router, F
 from aiogram.filters import CommandStart
@@ -257,31 +260,12 @@ async def search_by_number(message: Message, state: FSMContext):
             for pass_data in temp_res_passes:
                 found = True
                 temp_pass, fio, plot_number = pass_data
-                days = 1
-                days_ = temp_pass.purpose
-                if days_.isdigit():
-                    days = int(days_)
-                if temp_pass.purpose in ['6', '13', '29']:
-                    value = f'{int(temp_pass.purpose) + 1} дней\n'
-                elif temp_pass.purpose == '1':
-                    value = '2 дня\n'
-                else:
-                    value = '1 день\n'
-                text = (
+                hdr = (
                     "⏳ <b>Временный пропуск резидента</b>\n\n"
-                    f"👤 ФИО резидента: {fio}\n"
-                    f"🏠 Номер участка: {plot_number}\n"
-                    f"🚗 Тип ТС: {'Легковой' if temp_pass.vehicle_type == 'car' else 'Грузовой'}\n"
-                    f"🔢 Номер: {temp_pass.car_number}\n"
-                    f"🚙 Марка: {temp_pass.car_brand}\n"
-                    f"📦 Тип груза: {temp_pass.cargo_type}\n"
-                    # f"🎯 Цель визита: {temp_pass.purpose}\n"
-                    f"📅 Дата визита: {temp_pass.visit_date.strftime('%d.%m.%Y')} - "
-                    f"{(temp_pass.visit_date + timedelta(days=days)).strftime('%d.%m.%Y')}\n"
-                    f"Действие пропуска: {value}"
-                    f"💬 Комментарий владельца: {temp_pass.owner_comment or 'нет'}\n"
-                    f"📝 Комментарий для СБ: {temp_pass.security_comment or 'нет'}"
+                    f"👤 ФИО резидента: {html_lib.escape(str(fio or ''))}\n"
+                    f"🏠 Номер участка: {html_lib.escape(str(plot_number or ''))}\n"
                 )
+                text = approved_temp_search_card_html(temp_pass, hdr, include_destination=False)
                 await message.answer(text, parse_mode="HTML", reply_markup=car_in_button(temp_pass.id))
                 await asyncio.sleep(0.05)
 
@@ -289,62 +273,20 @@ async def search_by_number(message: Message, state: FSMContext):
             for pass_data in temp_contr_passes:
                 found = True
                 temp_pass, fio, company, position = pass_data
-                days = 1
-                days_ = temp_pass.purpose
-                if days_.isdigit():
-                    days = int(days_)
-                if temp_pass.purpose in ['6', '13', '29']:
-                    value = f'{int(temp_pass.purpose) + 1} дней\n'
-                elif temp_pass.purpose == '1':
-                    value = '2 дня\n'
-                else:
-                    value = '1 день\n'
-                text = (
+                hdr = (
                     "⏳ <b>Временный пропуск подрядчика</b>\n\n"
-                    f"👷 ФИО подрядчика: {fio}\n"
-                    f"🏢 Компания: {company}\n"
-                    f"💼 Должность: {position}\n"
-                    f"🚗 Тип ТС: {'Легковой' if temp_pass.vehicle_type == 'car' else 'Грузовой'}\n"
-                    f"🔢 Номер: {temp_pass.car_number}\n"
-                    f"🚙 Марка: {temp_pass.car_brand}\n"
-                    f"📦 Тип груза: {temp_pass.cargo_type}\n"
-                    f"🏠 Место назначения: {temp_pass.destination}\n"
-                    # f"🎯 Цель визита: {temp_pass.purpose}\n"
-                    f"📅 Дата визита: {temp_pass.visit_date.strftime('%d.%m.%Y')} - "
-                    f"{(temp_pass.visit_date + timedelta(days=days)).strftime('%d.%m.%Y')}\n"
-                    f"Действие пропуска: {value}"
-                    f"💬 Комментарий владельца: {temp_pass.owner_comment or 'нет'}\n"
-                    f"📝 Комментарий для СБ: {temp_pass.security_comment or 'нет'}"
+                    f"👷 ФИО подрядчика: {html_lib.escape(str(fio or ''))}\n"
+                    f"🏢 Компания: {html_lib.escape(str(company or ''))}\n"
+                    f"💼 Должность: {html_lib.escape(str(position or ''))}\n"
                 )
+                text = approved_temp_search_card_html(temp_pass, hdr, include_destination=True)
                 await message.answer(text, parse_mode="HTML", reply_markup=car_in_button(temp_pass.id))
                 await asyncio.sleep(0.05)
 
             for temp_pass in temp_staff_passes:
                 found = True
-                days = 1
-                days_ = temp_pass.purpose
-                if days_.isdigit():
-                    days = int(days_)
-                if temp_pass.purpose in ['6', '13', '29']:
-                    value = f'{int(temp_pass.purpose) + 1} дней\n'
-                elif temp_pass.purpose == '1':
-                    value = '2 дня\n'
-                else:
-                    value = '1 день\n'
-                text = (
-                    "⏳ <b>Временный пропуск от представителя УК</b>\n\n"
-                    f"🚗 Тип ТС: {'Легковой' if temp_pass.vehicle_type == 'car' else 'Грузовой'}\n"
-                    f"🔢 Номер: {temp_pass.car_number}\n"
-                    f"🚙 Марка: {temp_pass.car_brand}\n"
-                    f"📦 Тип груза: {temp_pass.cargo_type}\n"
-                    f"🏠 Место назначения: {temp_pass.destination}\n"
-                    # f"🎯 Цель визита: {temp_pass.purpose}\n"
-                    f"📅 Дата визита: {temp_pass.visit_date.strftime('%d.%m.%Y')} - "
-                    f"{(temp_pass.visit_date + timedelta(days=days)).strftime('%d.%m.%Y')}\n"
-                    f"Действие пропуска: {value}"
-                    f"💬 Комментарий владельца: {temp_pass.owner_comment or 'нет'}\n"
-                    f"📝 Комментарий для СБ: {temp_pass.security_comment or 'нет'}"
-                )
+                hdr = "⏳ <b>Временный пропуск от представителя УК</b>\n\n"
+                text = approved_temp_search_card_html(temp_pass, hdr, include_destination=True)
                 await message.answer(text, parse_mode="HTML", reply_markup=car_in_button(temp_pass.id))
                 await asyncio.sleep(0.05)
 
@@ -527,31 +469,12 @@ async def search_by_digits(message: Message, state: FSMContext):
             for pass_data in temp_res_passes:
                 found = True
                 temp_pass, fio, plot_number = pass_data
-                days = 1
-                days_ = temp_pass.purpose
-                if days_.isdigit():
-                    days = int(days_)
-                if temp_pass.purpose in ['6', '13', '29']:
-                    value = f'{int(temp_pass.purpose) + 1} дней\n'
-                elif temp_pass.purpose == '1':
-                    value = '2 дня\n'
-                else:
-                    value = '1 день\n'
-                text = (
+                hdr = (
                     "⏳ <b>Временный пропуск резидента</b>\n\n"
-                    f"👤 ФИО резидента: {fio}\n"
-                    f"🏠 Номер участка: {plot_number}\n"
-                    f"🚗 Тип ТС: {'Легковой' if temp_pass.vehicle_type == 'car' else 'Грузовой'}\n"
-                    f"🔢 Номер: {temp_pass.car_number}\n"
-                    f"🚙 Марка: {temp_pass.car_brand}\n"
-                    f"📦 Тип груза: {temp_pass.cargo_type}\n"
-                    # f"🎯 Цель визита: {temp_pass.purpose}\n"
-                    f"📅 Дата визита: {temp_pass.visit_date.strftime('%d.%m.%Y')} - "
-                    f"{(temp_pass.visit_date + timedelta(days=days)).strftime('%d.%m.%Y')}\n"
-                    f"Действие пропуска: {value}"
-                    f"💬 Комментарий владельца: {temp_pass.owner_comment or 'нет'}\n"
-                    f"📝 Комментарий для СБ: {temp_pass.security_comment or 'нет'}"
+                    f"👤 ФИО резидента: {html_lib.escape(str(fio or ''))}\n"
+                    f"🏠 Номер участка: {html_lib.escape(str(plot_number or ''))}\n"
                 )
+                text = approved_temp_search_card_html(temp_pass, hdr, include_destination=False)
                 await message.answer(text, parse_mode="HTML", reply_markup=car_in_button(temp_pass.id))
                 await asyncio.sleep(0.05)
 
@@ -559,65 +482,22 @@ async def search_by_digits(message: Message, state: FSMContext):
             for pass_data in temp_contr_passes:
                 found = True
                 temp_pass, fio, company, position = pass_data
-                days = 1
-                days_ = temp_pass.purpose
-                if days_.isdigit():
-                    days = int(days_)
-                if temp_pass.purpose in ['6', '13', '29']:
-                    value = f'{int(temp_pass.purpose) + 1} дней\n'
-                elif temp_pass.purpose == '1':
-                    value = '2 дня\n'
-                else:
-                    value = '1 день\n'
-                text = (
+                hdr = (
                     "⏳ <b>Временный пропуск подрядчика</b>\n\n"
-                    f"👷 ФИО подрядчика: {fio}\n"
-                    f"🏢 Компания: {company}\n"
-                    f"💼 Должность: {position}\n"
-                    f"🚗 Тип ТС: {'Легковой' if temp_pass.vehicle_type == 'car' else 'Грузовой'}\n"
-                    f"🔢 Номер: {temp_pass.car_number}\n"
-                    f"🚙 Марка: {temp_pass.car_brand}\n"
-                    f"📦 Тип груза: {temp_pass.cargo_type}\n"
-                    f"🏠 Место назначения: {temp_pass.destination}\n"
-                    # f"🎯 Цель визита: {temp_pass.purpose}\n"
-                    f"📅 Дата визита: {temp_pass.visit_date.strftime('%d.%m.%Y')} - "
-                    f"{(temp_pass.visit_date + timedelta(days=days)).strftime('%d.%m.%Y')}\n"
-                    f"Действие пропуска: {value}"
-                    f"💬 Комментарий владельца: {temp_pass.owner_comment or 'нет'}\n"
-                    f"📝 Комментарий для СБ: {temp_pass.security_comment or 'нет'}"
+                    f"👷 ФИО подрядчика: {html_lib.escape(str(fio or ''))}\n"
+                    f"🏢 Компания: {html_lib.escape(str(company or ''))}\n"
+                    f"💼 Должность: {html_lib.escape(str(position or ''))}\n"
                 )
+                text = approved_temp_search_card_html(temp_pass, hdr, include_destination=True)
                 await message.answer(text, parse_mode="HTML", reply_markup=car_in_button(temp_pass.id))
                 await asyncio.sleep(0.05)
 
             for temp_pass in temp_staff_passes:
                 found = True
-                days = 1
-                days_ = temp_pass.purpose
-                if days_.isdigit():
-                    days = int(days_)
-                if temp_pass.purpose in ['6', '13', '29']:
-                    value = f'{int(temp_pass.purpose) + 1} дней\n'
-                elif temp_pass.purpose == '1':
-                    value = '2 дня\n'
-                else:
-                    value = '1 день\n'
-                text = (
-                    "⏳ <b>Временный пропуск от представителя УК</b>\n\n"
-                    f"🚗 Тип ТС: {'Легковой' if temp_pass.vehicle_type == 'car' else 'Грузовой'}\n"
-                    f"🔢 Номер: {temp_pass.car_number}\n"
-                    f"🚙 Марка: {temp_pass.car_brand}\n"
-                    f"📦 Тип груза: {temp_pass.cargo_type}\n"
-                    f"🏠 Место назначения: {temp_pass.destination}\n"
-                    # f"🎯 Цель визита: {temp_pass.purpose}\n"
-                    f"📅 Дата визита: {temp_pass.visit_date.strftime('%d.%m.%Y')} - "
-                    f"{(temp_pass.visit_date + timedelta(days=days)).strftime('%d.%m.%Y')}\n"
-                    f"Действие пропуска: {value}"
-                    f"💬 Комментарий владельца: {temp_pass.owner_comment or 'нет'}\n"
-                    f"📝 Комментарий для СБ: {temp_pass.security_comment or 'нет'}"
-                )
+                hdr = "⏳ <b>Временный пропуск от представителя УК</b>\n\n"
+                text = approved_temp_search_card_html(temp_pass, hdr, include_destination=True)
                 await message.answer(text, parse_mode="HTML", reply_markup=car_in_button(temp_pass.id))
                 await asyncio.sleep(0.05)
-
 
         # Формируем итоговое сообщение
         if found:
@@ -1037,31 +917,12 @@ async def search_by_destination(message: Message, state: FSMContext):
             for pass_data in temp_res_passes:
                 found = True
                 temp_pass, fio, plot_number = pass_data
-                days = 1
-                days_ = temp_pass.purpose
-                if days_.isdigit():
-                    days = int(days_)
-                if temp_pass.purpose in ['6', '13', '29']:
-                    value = f'{int(temp_pass.purpose) + 1} дней\n'
-                elif temp_pass.purpose == '1':
-                    value = '2 дня\n'
-                else:
-                    value = '1 день\n'
-                text = (
+                hdr = (
                     "⏳ <b>Временный пропуск резидента</b>\n\n"
-                    f"👤 ФИО резидента: {fio}\n"
-                    f"🏠 Номер участка: {plot_number}\n"
-                    f"🚗 Тип ТС: {'Легковой' if temp_pass.vehicle_type == 'car' else 'Грузовой'}\n"
-                    f"🔢 Номер: {temp_pass.car_number}\n"
-                    f"🚙 Марка: {temp_pass.car_brand}\n"
-                    f"📦 Тип груза: {temp_pass.cargo_type}\n"
-                    # f"🎯 Цель визита: {temp_pass.purpose}\n"
-                    f"📅 Дата визита: {temp_pass.visit_date.strftime('%d.%m.%Y')} - "
-                    f"{(temp_pass.visit_date + timedelta(days=days)).strftime('%d.%m.%Y')}\n"
-                    f"Действие пропуска: {value}"
-                    f"💬 Комментарий владельца: {temp_pass.owner_comment or 'нет'}\n"
-                    f"📝 Комментарий для СБ: {temp_pass.security_comment or 'нет'}"
+                    f"👤 ФИО резидента: {html_lib.escape(str(fio or ''))}\n"
+                    f"🏠 Номер участка: {html_lib.escape(str(plot_number or ''))}\n"
                 )
+                text = approved_temp_search_card_html(temp_pass, hdr, include_destination=False)
                 await message.answer(text, parse_mode="HTML", reply_markup=car_in_button(temp_pass.id))
                 await asyncio.sleep(0.05)
 
@@ -1069,65 +930,22 @@ async def search_by_destination(message: Message, state: FSMContext):
             for pass_data in temp_contr_passes:
                 found = True
                 temp_pass, fio, company, position = pass_data
-                days = 1
-                days_ = temp_pass.purpose
-                if days_.isdigit():
-                    days = int(days_)
-                if temp_pass.purpose in ['6', '13', '29']:
-                    value = f'{int(temp_pass.purpose) + 1} дней\n'
-                elif temp_pass.purpose == '1':
-                    value = '2 дня\n'
-                else:
-                    value = '1 день\n'
-                text = (
+                hdr = (
                     "⏳ <b>Временный пропуск подрядчика</b>\n\n"
-                    f"👷 ФИО подрядчика: {fio}\n"
-                    f"🏢 Компания: {company}\n"
-                    f"💼 Должность: {position}\n"
-                    f"🚗 Тип ТС: {'Легковой' if temp_pass.vehicle_type == 'car' else 'Грузовой'}\n"
-                    f"🔢 Номер: {temp_pass.car_number}\n"
-                    f"🚙 Марка: {temp_pass.car_brand}\n"
-                    f"📦 Тип груза: {temp_pass.cargo_type}\n"
-                    f"🏠 Место назначения: {temp_pass.destination}\n"
-                    # f"🎯 Цель визита: {temp_pass.purpose}\n"
-                    f"📅 Дата визита: {temp_pass.visit_date.strftime('%d.%m.%Y')} - "
-                    f"{(temp_pass.visit_date + timedelta(days=days)).strftime('%d.%m.%Y')}\n"
-                    f"Действие пропуска: {value}"
-                    f"💬 Комментарий владельца: {temp_pass.owner_comment or 'нет'}\n"
-                    f"📝 Комментарий для СБ: {temp_pass.security_comment or 'нет'}"
+                    f"👷 ФИО подрядчика: {html_lib.escape(str(fio or ''))}\n"
+                    f"🏢 Компания: {html_lib.escape(str(company or ''))}\n"
+                    f"💼 Должность: {html_lib.escape(str(position or ''))}\n"
                 )
+                text = approved_temp_search_card_html(temp_pass, hdr, include_destination=True)
                 await message.answer(text, parse_mode="HTML", reply_markup=car_in_button(temp_pass.id))
                 await asyncio.sleep(0.05)
 
             for temp_pass in temp_staff_passes:
                 found = True
-                days = 1
-                days_ = temp_pass.purpose
-                if days_.isdigit():
-                    days = int(days_)
-                if temp_pass.purpose in ['6', '13', '29']:
-                    value = f'{int(temp_pass.purpose) + 1} дней\n'
-                elif temp_pass.purpose == '1':
-                    value = '2 дня\n'
-                else:
-                    value = '1 день\n'
-                text = (
-                    "⏳ <b>Временный пропуск от представителя УК</b>\n\n"
-                    f"🚗 Тип ТС: {'Легковой' if temp_pass.vehicle_type == 'car' else 'Грузовой'}\n"
-                    f"🔢 Номер: {temp_pass.car_number}\n"
-                    f"🚙 Марка: {temp_pass.car_brand}\n"
-                    f"📦 Тип груза: {temp_pass.cargo_type}\n"
-                    f"🏠 Место назначения: {temp_pass.destination}\n"
-                    # f"🎯 Цель визита: {temp_pass.purpose}\n"
-                    f"📅 Дата визита: {temp_pass.visit_date.strftime('%d.%m.%Y')} - "
-                    f"{(temp_pass.visit_date + timedelta(days=days)).strftime('%d.%m.%Y')}\n"
-                    f"Действие пропуска: {value}"
-                    f"💬 Комментарий владельца: {temp_pass.owner_comment or 'нет'}\n"
-                    f"📝 Комментарий для СБ: {temp_pass.security_comment or 'нет'}"
-                )
+                hdr = "⏳ <b>Временный пропуск от представителя УК</b>\n\n"
+                text = approved_temp_search_card_html(temp_pass, hdr, include_destination=True)
                 await message.answer(text, parse_mode="HTML", reply_markup=car_in_button(temp_pass.id))
                 await asyncio.sleep(0.05)
-
 
         # Формируем итоговое сообщение
         if found:

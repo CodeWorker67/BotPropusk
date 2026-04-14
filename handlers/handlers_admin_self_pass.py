@@ -10,12 +10,17 @@ import datetime
 from sqlalchemy import select
 
 from bot import bot
-from config import ADMIN_IDS, RAZRAB
+from config import ADMIN_IDS, RAZRAB, TRUCK_CATEGORIES_PHOTO_FILE_ID
 from db.models import AsyncSessionLocal, TemporaryPass, Manager, PermanentPass
 from date_parser import parse_date
 from db.util import get_active_admins_managers_sb_tg_ids
 from handlers.handlers_admin_permanent_pass import get_passes_menu
 from handlers.handlers_admin_user_management import admin_reply_keyboard
+from temporary_truck import (
+    PAYLOAD_PREFIX_SELF,
+    category_from_truck_callback_data,
+    truck_category_markup,
+)
 
 
 router = Router()
@@ -23,6 +28,11 @@ router = Router()
 
 class TemporarySelfPassStates(StatesGroup):
     CHOOSE_VEHICLE_TYPE = State()
+    TRUCK_CHOOSE_CATEGORY = State()
+    TRUCK_INPUT_BRAND = State()
+    TRUCK_INPUT_NUMBER = State()
+    TRUCK_INPUT_COMMENT = State()
+    TRUCK_INPUT_VISIT_DATE = State()
     CHOOSE_WEIGHT_CATEGORY = State()
     CHOOSE_LENGTH_CATEGORY = State()
     INPUT_CAR_NUMBER = State()
@@ -79,15 +89,129 @@ async def process_self_vehicle_type(callback: CallbackQuery, state: FSMContext):
     await state.update_data(vehicle_type=vehicle_type)
 
     if vehicle_type == "truck":
-        keyboard = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="≤ 12 тонн", callback_data="self_weight_light")],
-            [InlineKeyboardButton(text="> 12 тонн", callback_data="self_weight_heavy")]
-        ])
-        await callback.message.answer("Выберите тоннаж:", reply_markup=keyboard)
-        await state.set_state(TemporarySelfPassStates.CHOOSE_WEIGHT_CATEGORY)
+        kb = truck_category_markup(PAYLOAD_PREFIX_SELF)
+        cap = "Выберите тип машины:"
+        if TRUCK_CATEGORIES_PHOTO_FILE_ID:
+            await callback.message.answer_photo(
+                photo=TRUCK_CATEGORIES_PHOTO_FILE_ID,
+                caption=cap,
+                reply_markup=kb,
+            )
+        else:
+            await callback.message.answer(cap, reply_markup=kb)
+        await state.set_state(TemporarySelfPassStates.TRUCK_CHOOSE_CATEGORY)
     else:
         await callback.message.answer("Введите номер машины:")
         await state.set_state(TemporarySelfPassStates.INPUT_CAR_NUMBER)
+
+
+@router.callback_query(
+    TemporarySelfPassStates.TRUCK_CHOOSE_CATEGORY,
+    F.data.startswith(f"{PAYLOAD_PREFIX_SELF}_"),
+)
+async def process_self_truck_category(callback: CallbackQuery, state: FSMContext):
+    label = category_from_truck_callback_data(callback.data or "", PAYLOAD_PREFIX_SELF)
+    if not label:
+        await callback.answer()
+        return
+    await state.update_data(weight_category=label)
+    await callback.message.answer("Введите марку машины:")
+    await state.set_state(TemporarySelfPassStates.TRUCK_INPUT_BRAND)
+    await callback.answer()
+
+
+@router.message(F.text, TemporarySelfPassStates.TRUCK_INPUT_BRAND)
+async def process_self_truck_brand(message: Message, state: FSMContext):
+    await state.update_data(car_brand=message.text)
+    await message.answer("Введите номер машины:")
+    await state.set_state(TemporarySelfPassStates.TRUCK_INPUT_NUMBER)
+
+
+@router.message(F.text, TemporarySelfPassStates.TRUCK_INPUT_NUMBER)
+async def process_self_truck_number(message: Message, state: FSMContext):
+    await state.update_data(car_number=message.text)
+    await message.answer("Добавьте комментарий (если не требуется, напишите 'нет'):")
+    await state.set_state(TemporarySelfPassStates.TRUCK_INPUT_COMMENT)
+
+
+@router.message(F.text, TemporarySelfPassStates.TRUCK_INPUT_COMMENT)
+async def process_self_truck_comment(message: Message, state: FSMContext):
+    t = (message.text or "").strip()
+    comment = None if t.lower() == "нет" else t
+    await state.update_data(owner_comment=comment)
+    await message.answer(
+        "Введите дату приезда (в формате ДД.ММ, ДД.ММ.ГГГГ или '5 июня'):",
+    )
+    await state.set_state(TemporarySelfPassStates.TRUCK_INPUT_VISIT_DATE)
+
+
+@router.message(F.text, TemporarySelfPassStates.TRUCK_INPUT_VISIT_DATE)
+async def process_self_truck_visit_date(message: Message, state: FSMContext):
+    try:
+        user_input = (message.text or "").strip()
+        visit_date = parse_date(user_input)
+        now = datetime.datetime.now().date()
+
+        if not visit_date:
+            await message.answer("❌ Неверный формат даты! Введите снова:")
+            return
+
+        if visit_date < now:
+            await message.answer("❌ Дата не может быть меньше текущей! Введите снова:")
+            return
+
+        max_date = now + datetime.timedelta(days=31)
+        if visit_date > max_date:
+            await message.answer("❌ Пропуск нельзя заказать на месяц вперед! Введите снова:")
+            return
+
+        data = await state.get_data()
+        owner_info = await get_owner_info(message.from_user.id)
+        comment = data.get("owner_comment")
+
+        async with AsyncSessionLocal() as session:
+            new_pass = TemporaryPass(
+                owner_type="staff",
+                vehicle_type="truck",
+                weight_category=data.get("weight_category"),
+                length_category=None,
+                car_number=data["car_number"].upper(),
+                car_brand=data["car_brand"],
+                cargo_type=None,
+                purpose="0",
+                destination=None,
+                visit_date=visit_date,
+                owner_comment=comment,
+                security_comment=f"Выписал {owner_info}",
+                status="approved",
+                created_at=datetime.datetime.now(),
+                time_registration=datetime.datetime.now(),
+            )
+            session.add(new_pass)
+            await session.commit()
+
+        await message.answer(
+            f"✅ Временный пропуск на машину {data['car_number'].upper()} оформлен!",
+            reply_markup=get_passes_menu(),
+        )
+        tg_ids = await get_active_admins_managers_sb_tg_ids()
+        for tg_id in tg_ids:
+            try:
+                await bot.send_message(
+                    tg_id,
+                    text=(
+                        f"Пропуск от {owner_info} на машину с номером {data['car_number'].upper()} "
+                        f"одобрен автоматически.\n(Пропуска > Временные пропуска > Подтвержденные)"
+                    ),
+                    reply_markup=admin_reply_keyboard,
+                )
+                await asyncio.sleep(0.05)
+            except Exception:
+                pass
+        await state.clear()
+    except Exception as e:
+        await message.answer(f"❌ Ошибка при оформлении пропуска: {str(e)}")
+        await state.clear()
 
 
 @router.callback_query(

@@ -1,5 +1,6 @@
 # handlers_admin_temporary_pass.py
 import asyncio
+import html as html_lib
 import logging
 import datetime
 from typing import Union
@@ -19,6 +20,11 @@ from db.util import get_active_admins_managers_sb_tg_ids, text_warning
 from filters import IsAdminOrManager
 from handlers.handlers_admin_user_management import admin_reply_keyboard
 from handlers.handlers_admin_permanent_pass import passes_menu
+from temporary_truck import (
+    is_new_truck_pass,
+    new_truck_price_line_html,
+    new_truck_vehicle_block_html,
+)
 
 router = Router()
 router.message.filter(IsAdminOrManager())
@@ -76,13 +82,10 @@ async def show_temporary_passes(message: Union[Message, CallbackQuery], state: F
         current_page = data.get('temp_pass_current_page', 0)
 
         async with AsyncSessionLocal() as session:
-            # Получаем общее количество заявок
             total_count = await session.scalar(
-                select(func.count(TemporaryPass.id))
-                .where(TemporaryPass.status == status)
+                select(func.count(TemporaryPass.id)).where(TemporaryPass.status == status)
             )
 
-            # Получаем заявки для текущей страницы
             result = await session.execute(
                 select(TemporaryPass, Resident.fio, Contractor.fio)
                 .outerjoin(Resident, Resident.id == TemporaryPass.resident_id)
@@ -206,6 +209,28 @@ async def get_pass_owner_info(session, pass_request):
         return "Представитель УК"
 
 
+async def get_temp_pass_payer_tg_id(session, pass_request) -> int | None:
+    if pass_request.owner_type == "resident" and pass_request.resident_id:
+        resident = await session.get(Resident, pass_request.resident_id)
+        if resident and resident.tg_id is not None:
+            return int(resident.tg_id)
+    elif pass_request.owner_type == "contractor" and pass_request.contractor_id:
+        contractor = await session.get(Contractor, pass_request.contractor_id)
+        if contractor and contractor.tg_id is not None:
+            return int(contractor.tg_id)
+    return None
+
+
+async def get_temp_pass_payer_phone(session, pass_request) -> str | None:
+    if pass_request.owner_type == "resident" and pass_request.resident_id:
+        resident = await session.get(Resident, pass_request.resident_id)
+        return resident.phone if resident else None
+    if pass_request.owner_type == "contractor" and pass_request.contractor_id:
+        contractor = await session.get(Contractor, pass_request.contractor_id)
+        return contractor.phone if contractor else None
+    return None
+
+
 @router.callback_query(F.data.startswith("view_temp_pass_"))
 async def view_temp_pass_details(callback: CallbackQuery, state: FSMContext):
     try:
@@ -219,29 +244,39 @@ async def view_temp_pass_details(callback: CallbackQuery, state: FSMContext):
                 return
 
             owner_info = await get_pass_owner_info(session, pass_request)
-            if pass_request.purpose in ['6', '13', '29']:
-                value = f'{int(pass_request.purpose) + 1} дней\n'
-            elif pass_request.purpose == '1':
-                value = '2 дня\n'
+            payer_uid = await get_temp_pass_payer_tg_id(session, pass_request)
+            payer_phone = await get_temp_pass_payer_phone(session, pass_request)
+
+            if is_new_truck_pass(pass_request):
+                text = (
+                    f"{html_lib.escape(owner_info)}\n"
+                    f"Тип ТС: Грузовой\n"
+                    f"{new_truck_vehicle_block_html(pass_request)}"
+                    f"{new_truck_price_line_html(pass_request, payer_uid, payer_phone)}"
+                    f"Время создания: {pass_request.created_at.strftime('%d.%m.%Y %H:%M')}"
+                )
             else:
-                value = '1 день\n'
-            # Формируем текст сообщения
-            text = (
-                f"{owner_info}\n"
-                f"Тип ТС: {'Легковой' if pass_request.vehicle_type == 'car' else 'Грузовой'}\n"
-                f"Категория веса: {pass_request.weight_category or 'Н/Д'}\n"
-                f"Категория длины: {pass_request.length_category or 'Н/Д'}\n"
-                f"Тип груза: {pass_request.cargo_type or 'Н/Д'}\n"
-                f"Номер: {pass_request.car_number}\n"
-                f"Марка: {pass_request.car_brand}\n"
-                f"Пункт назначения: {pass_request.destination}\n"
-                # f"Цель визита: {pass_request.purpose}\n"
-                f"Дата визита: {pass_request.visit_date.strftime('%d.%m.%Y')}\n"
-                f"Действие пропуска: {value}"
-                f"Комментарий владельца: {pass_request.owner_comment or 'нет'}\n"
-                f"Комментарий для СБ: {pass_request.security_comment or 'нет'}\n"
-                f"Время создания: {pass_request.created_at.strftime('%d.%m.%Y %H:%M')}"
-            )
+                if pass_request.purpose in ['6', '13', '29']:
+                    value = f'{int(pass_request.purpose) + 1} дней\n'
+                elif pass_request.purpose == '1':
+                    value = '2 дня\n'
+                else:
+                    value = '1 день\n'
+                text = (
+                    f"{html_lib.escape(owner_info)}\n"
+                    f"Тип ТС: {'Легковой' if pass_request.vehicle_type == 'car' else 'Грузовой'}\n"
+                    f"Категория веса: {html_lib.escape(str(pass_request.weight_category or 'Н/Д'))}\n"
+                    f"Категория длины: {html_lib.escape(str(pass_request.length_category or 'Н/Д'))}\n"
+                    f"Тип груза: {html_lib.escape(str(pass_request.cargo_type or 'Н/Д'))}\n"
+                    f"Номер: {html_lib.escape(str(pass_request.car_number))}\n"
+                    f"Марка: {html_lib.escape(str(pass_request.car_brand))}\n"
+                    f"Пункт назначения: {html_lib.escape(str(pass_request.destination or ''))}\n"
+                    f"Дата визита: {pass_request.visit_date.strftime('%d.%m.%Y')}\n"
+                    f"Действие пропуска: {value}"
+                    f"Комментарий владельца: {html_lib.escape(str(pass_request.owner_comment or 'нет'))}\n"
+                    f"Комментарий для СБ: {html_lib.escape(str(pass_request.security_comment or 'нет'))}\n"
+                    f"Время создания: {pass_request.created_at.strftime('%d.%m.%Y %H:%M')}"
+                )
 
             if pass_request.time_registration:
                 text += f"\nВремя обработки: {pass_request.time_registration.strftime('%d.%m.%Y %H:%M')}"
@@ -261,7 +296,7 @@ async def view_temp_pass_details(callback: CallbackQuery, state: FSMContext):
 
             keyboard = InlineKeyboardMarkup(inline_keyboard=keyboard_buttons)
 
-            await callback.message.edit_text(text, reply_markup=keyboard)
+            await callback.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
     except Exception as e:
         await bot.send_message(RAZRAB, f'{callback.from_user.id} - {str(e)}')
         await asyncio.sleep(0.05)
@@ -287,6 +322,10 @@ async def approve_temp_pass(callback: CallbackQuery, state: FSMContext):
             pass_request = await session.get(TemporaryPass, pass_id)
             if not pass_request:
                 await callback.answer("Пропуск не найден")
+                return
+
+            if pass_request.status != "pending":
+                await callback.answer("Можно одобрить только заявку «на рассмотрении»", show_alert=True)
                 return
 
             pass_request.status = 'approved'
@@ -446,25 +485,36 @@ async def finish_editing_temp_pass(callback: CallbackQuery, state: FSMContext):
         async with AsyncSessionLocal() as session:
             pass_request = await session.get(TemporaryPass, pass_id)
             owner_info = await get_pass_owner_info(session, pass_request)
-            if pass_request.purpose in ['6', '13', '29']:
-                value = f'{int(pass_request.purpose) + 1} дней\n'
-            elif pass_request.purpose == '1':
-                value = '2 дня\n'
+            payer_uid = await get_temp_pass_payer_tg_id(session, pass_request)
+            payer_phone = await get_temp_pass_payer_phone(session, pass_request)
+
+            if is_new_truck_pass(pass_request):
+                text = (
+                    f"{html_lib.escape(owner_info)}\n"
+                    f"Тип ТС: Грузовой\n"
+                    f"{new_truck_vehicle_block_html(pass_request)}"
+                    f"{new_truck_price_line_html(pass_request, payer_uid, payer_phone)}"
+                    f"Время создания: {pass_request.created_at.strftime('%d.%m.%Y %H:%M')}"
+                )
             else:
-                value = '1 день\n'
-            text = (
-                f"{owner_info}\n"
-                f"Тип ТС: {'Легковой' if pass_request.vehicle_type == 'car' else 'Грузовой'}\n"
-                f"Номер: {pass_request.car_number}\n"
-                f"Марка: {pass_request.car_brand}\n"
-                f"Тип груза: {pass_request.cargo_type}\n"
-                f"Пункт назначения: {pass_request.destination}\n"
-                # f"Цель визита: {pass_request.purpose}\n"
-                f"Дата визита: {pass_request.visit_date.strftime('%d.%m.%Y')}\n"
-                f"Действие пропуска: {value}"
-                f"Комментарий владельца: {pass_request.owner_comment or 'нет'}\n"
-                f"Комментарий для СБ: {pass_request.security_comment or 'нет'}"
-            )
+                if pass_request.purpose in ['6', '13', '29']:
+                    value = f'{int(pass_request.purpose) + 1} дней\n'
+                elif pass_request.purpose == '1':
+                    value = '2 дня\n'
+                else:
+                    value = '1 день\n'
+                text = (
+                    f"{html_lib.escape(owner_info)}\n"
+                    f"Тип ТС: {'Легковой' if pass_request.vehicle_type == 'car' else 'Грузовой'}\n"
+                    f"Номер: {html_lib.escape(str(pass_request.car_number))}\n"
+                    f"Марка: {html_lib.escape(str(pass_request.car_brand))}\n"
+                    f"Тип груза: {html_lib.escape(str(pass_request.cargo_type or ''))}\n"
+                    f"Пункт назначения: {html_lib.escape(str(pass_request.destination or ''))}\n"
+                    f"Дата визита: {pass_request.visit_date.strftime('%d.%m.%Y')}\n"
+                    f"Действие пропуска: {value}"
+                    f"Комментарий владельца: {html_lib.escape(str(pass_request.owner_comment or 'нет'))}\n"
+                    f"Комментарий для СБ: {html_lib.escape(str(pass_request.security_comment or 'нет'))}"
+                )
 
             keyboard_buttons = []
             if pass_request.status == 'pending':
@@ -482,7 +532,8 @@ async def finish_editing_temp_pass(callback: CallbackQuery, state: FSMContext):
 
             await callback.message.edit_text(
                 text=text,
-                reply_markup=keyboard
+                reply_markup=keyboard,
+                parse_mode="HTML",
             )
 
         await state.set_state(default_state)
@@ -686,26 +737,37 @@ async def update_temp_security_comment(message: Message, state: FSMContext):
 
 async def update_temp_pass_view(message: Message, pass_request, session):
     owner_info = await get_pass_owner_info(session, pass_request)
-    if pass_request.purpose in ['6', '13', '29']:
-        value = f'{int(pass_request.purpose) + 1} дней\n'
-    elif pass_request.purpose == '1':
-        value = '2 дня\n'
+    payer_uid = await get_temp_pass_payer_tg_id(session, pass_request)
+    payer_phone = await get_temp_pass_payer_phone(session, pass_request)
+
+    if is_new_truck_pass(pass_request):
+        text = (
+            f"{html_lib.escape(owner_info)}\n"
+            f"Тип ТС: Грузовой\n"
+            f"{new_truck_vehicle_block_html(pass_request)}"
+            f"{new_truck_price_line_html(pass_request, payer_uid, payer_phone)}"
+            f"Время создания: {pass_request.created_at.strftime('%d.%m.%Y %H:%M')}"
+        )
     else:
-        value = '1 день\n'
-    text = (
-        f"{owner_info}\n"
-        f"Тип ТС: {'Легковой' if pass_request.vehicle_type == 'car' else 'Грузовой'}\n"
-        f"Номер: {pass_request.car_number}\n"
-        f"Марка: {pass_request.car_brand}\n"
-        f"Тип груза: {pass_request.cargo_type}\n"
-        f"Пункт назначения: {pass_request.destination}\n"
-        # f"Цель визита: {pass_request.purpose}\n"
-        f"Дата визита: {pass_request.visit_date.strftime('%d.%m.%Y')}\n"
-        f"Действие пропуска: {value}"
-        f"Комментарий владельца: {pass_request.owner_comment or 'нет'}\n"
-        f"Комментарий для СБ: {pass_request.security_comment or 'нет'}"
-    )
-    await message.answer(text, reply_markup=get_temp_edit_pass_keyboard())
+        if pass_request.purpose in ['6', '13', '29']:
+            value = f'{int(pass_request.purpose) + 1} дней\n'
+        elif pass_request.purpose == '1':
+            value = '2 дня\n'
+        else:
+            value = '1 день\n'
+        text = (
+            f"{html_lib.escape(owner_info)}\n"
+            f"Тип ТС: {'Легковой' if pass_request.vehicle_type == 'car' else 'Грузовой'}\n"
+            f"Номер: {html_lib.escape(str(pass_request.car_number))}\n"
+            f"Марка: {html_lib.escape(str(pass_request.car_brand))}\n"
+            f"Тип груза: {html_lib.escape(str(pass_request.cargo_type or ''))}\n"
+            f"Пункт назначения: {html_lib.escape(str(pass_request.destination or ''))}\n"
+            f"Дата визита: {pass_request.visit_date.strftime('%d.%m.%Y')}\n"
+            f"Действие пропуска: {value}"
+            f"Комментарий владельца: {html_lib.escape(str(pass_request.owner_comment or 'нет'))}\n"
+            f"Комментарий для СБ: {html_lib.escape(str(pass_request.security_comment or 'нет'))}"
+        )
+    await message.answer(text, reply_markup=get_temp_edit_pass_keyboard(), parse_mode="HTML")
 
 
 @router.message(Command("delete_temporary"), IsAdminOrManager())
