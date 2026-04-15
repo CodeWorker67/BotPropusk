@@ -612,20 +612,29 @@ async def process_vehicle_type(callback: CallbackQuery, state: FSMContext):
             kb = truck_category_markup(PAYLOAD_PREFIX_RC)
             cap = "Выберите тип машины:"
             if TRUCK_CATEGORIES_PHOTO_FILE_ID:
-                await callback.message.answer_photo(
-                    photo=TRUCK_CATEGORIES_PHOTO_FILE_ID,
-                    caption=cap,
-                    reply_markup=kb,
-                )
+                try:
+                    await callback.message.answer_photo(
+                        photo=TRUCK_CATEGORIES_PHOTO_FILE_ID,
+                        caption=cap,
+                        reply_markup=kb,
+                    )
+                except Exception:
+                    # file_id от другого бота / устарел — иначе пользователь не видит ответа
+                    await callback.message.answer(cap, reply_markup=kb)
             else:
                 await callback.message.answer(cap, reply_markup=kb)
             await state.set_state(TemporaryPassStates.CHOOSE_TRUCK_CATEGORY)
         else:
             await callback.message.answer("Введите номер машины:")
             await state.set_state(TemporaryPassStates.INPUT_CAR_NUMBER)
+        await callback.answer()
     except Exception as e:
         await bot.send_message(RAZRAB, f'{callback.from_user.id} - {str(e)}')
         await asyncio.sleep(0.05)
+        try:
+            await callback.answer("Не удалось продолжить. Попробуйте снова.", show_alert=True)
+        except Exception:
+            pass
 
 
 @router.callback_query(
