@@ -6,7 +6,8 @@ from delete_temp_pass import scheduler
 from handlers import handlers_admin_search, handlers_contractor, handlers_for_all, handlers_admin_registration, \
     handlers_admin_temporary_pass, handlers_admin_user_management, handlers_resident_appeal, handlers_admin_appeal, \
     handlers_resident, handlers_admin_permanent_pass, handlers_admin_self_pass, handlers_admin_statistic, \
-    handlers_security, handlers_admin_manager_sending, handlers_truck_yookassa, handlers_admin_photo_info
+    handlers_security, handlers_admin_manager_sending, handlers_truck_yookassa, handlers_admin_photo_info, \
+    handlers_admin_push_max
 from aiogram import Dispatcher
 
 from bot import bot
@@ -22,6 +23,7 @@ async def main() -> None:
 
     dp = Dispatcher()
     dp.include_router(handlers_admin_photo_info.router)
+    dp.include_router(handlers_admin_push_max.router)
     dp.include_router(handlers_truck_yookassa.router)
     dp.include_router(handlers_admin_user_management.router)
     dp.include_router(handlers_admin_registration.router)
