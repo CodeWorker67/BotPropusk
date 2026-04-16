@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import html as html_lib
-from datetime import timedelta
+from datetime import date, timedelta
 
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
@@ -11,6 +11,12 @@ from config import (
     SPECIAL_PASS_PRICE_RUBLES,
     SPECIAL_PASS_RESIDENT_PHONES_RAW,
     SPECIAL_PASS_TG_USER_IDS,
+)
+
+TEMP_PASS_VEHICLE_TYPE_PROMPT = (
+    "❗️❗️❗️Внимание❗️❗️❗️\n"
+    "Газели и фургоны с грузом до 3,5 тонн оформляются как легковая машина.\n"
+    "Выберите тип машины:"
 )
 
 TRUCK_CATEGORY_LABELS: list[str] = [
@@ -168,6 +174,11 @@ def _days_from_purpose(purpose) -> int:
     if d.isdigit():
         return int(d)
     return 1
+
+
+def temp_pass_last_valid_date(visit_date: date, purpose: str | None) -> date:
+    """Последний календарный день действия (как в handlers_security для approved)."""
+    return visit_date + timedelta(days=_days_from_purpose(purpose))
 
 
 def approved_temp_search_card_html(

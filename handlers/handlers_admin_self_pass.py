@@ -18,6 +18,7 @@ from handlers.handlers_admin_permanent_pass import get_passes_menu
 from handlers.handlers_admin_user_management import admin_reply_keyboard
 from temporary_truck import (
     PAYLOAD_PREFIX_SELF,
+    TEMP_PASS_VEHICLE_TYPE_PROMPT,
     category_from_truck_callback_data,
     truck_category_markup,
 )
@@ -75,7 +76,7 @@ async def start_self_pass(callback: CallbackQuery, state: FSMContext):
         [InlineKeyboardButton(text="Легковая", callback_data="self_vehicle_type_car")],
         [InlineKeyboardButton(text="Грузовая", callback_data="self_vehicle_type_truck")]
     ])
-    await callback.message.edit_text("Выберите тип машины:", reply_markup=keyboard)
+    await callback.message.edit_text(TEMP_PASS_VEHICLE_TYPE_PROMPT, reply_markup=keyboard)
     await state.set_state(TemporarySelfPassStates.CHOOSE_VEHICLE_TYPE)
 
 

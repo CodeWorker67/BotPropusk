@@ -14,6 +14,7 @@ from sqlalchemy import select, func, or_, and_
 
 from temporary_truck import (
     PAYLOAD_PREFIX_RC,
+    TEMP_PASS_VEHICLE_TYPE_PROMPT,
     category_from_truck_callback_data,
     is_new_truck_pass,
     temp_pass_duration_label,
@@ -595,7 +596,7 @@ async def start_temporary_pass(callback: CallbackQuery, state: FSMContext):
             [InlineKeyboardButton(text="Легковая", callback_data="vehicle_type_car")],
             [InlineKeyboardButton(text="Грузовая", callback_data="vehicle_type_truck")]
         ])
-        await callback.message.answer("Выберите тип машины:", reply_markup=keyboard)
+        await callback.message.answer(TEMP_PASS_VEHICLE_TYPE_PROMPT, reply_markup=keyboard)
         await state.set_state(TemporaryPassStates.CHOOSE_VEHICLE_TYPE)
     except Exception as e:
         await bot.send_message(RAZRAB, f'{callback.from_user.id} - {str(e)}')

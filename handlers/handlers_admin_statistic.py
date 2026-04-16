@@ -1,14 +1,14 @@
 # handlers_admin_statistic.py
 import asyncio
 import logging
-from datetime import datetime
+from datetime import date, datetime
 from io import BytesIO
 
 import openpyxl
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, BufferedInputFile
 from openpyxl.workbook import Workbook
-from sqlalchemy import and_, desc, func, nullslast, select
+from sqlalchemy import and_, func, select
 
 from bot import bot
 from db.models import (
@@ -23,6 +23,7 @@ from db.models import (
 )
 from config import ADMIN_IDS, RAZRAB
 from filters import IsAdminOrManager
+from temporary_truck import temp_pass_last_valid_date
 
 router = Router()
 router.message.filter(IsAdminOrManager())
@@ -246,8 +247,11 @@ async def export_statistics_to_xlsx(callback: CallbackQuery):
                 .where(TemporaryPass.owner_type == "resident")
 
             res_temp_passes = await session.execute(res_stmt)
+            today = date.today()
             for tp_data in res_temp_passes:
                 tp = tp_data[0]
+                if temp_pass_last_valid_date(tp.visit_date, tp.purpose) < today:
+                    continue
                 ws_temp.append([
                     tp.id,
                     "Резидент",
@@ -277,6 +281,8 @@ async def export_statistics_to_xlsx(callback: CallbackQuery):
             contr_temp_passes = await session.execute(contr_stmt)
             for tp_data in contr_temp_passes:
                 tp = tp_data[0]
+                if temp_pass_last_valid_date(tp.visit_date, tp.purpose) < today:
+                    continue
                 ws_temp.append([
                     tp.id,
                     "Подрядчик",
@@ -294,36 +300,6 @@ async def export_statistics_to_xlsx(callback: CallbackQuery):
                     tp.status
                 ])
 
-            # Лист: Payments (успешные платежи ЮKassa)
-            ws_payments = wb.create_sheet("Payments")
-            ws_payments.append([
-                "ID",
-                "ID временного пропуска",
-                "YooKassa payment id",
-                "Сумма в копейках",
-                "Сумма в рублях",
-                "Статус",
-                "Дата создания",
-                "Оплачен",
-            ])
-            pay_stmt = (
-                select(TempPassYooKassaPayment)
-                .where(TempPassYooKassaPayment.status == "succeeded")
-                .order_by(nullslast(desc(TempPassYooKassaPayment.paid_at)))
-            )
-            pay_result = await session.execute(pay_stmt)
-            for pay in pay_result.scalars():
-                ws_payments.append([
-                    pay.id,
-                    pay.temporary_pass_id,
-                    pay.yookassa_payment_id,
-                    pay.amount_kopeks,
-                    pay.amount_kopeks / 100.0,
-                    pay.status,
-                    _dt(pay.created_at),
-                    _dt(pay.paid_at),
-                ])
-
             # Лист: оплаченные грузовые пропуска (одобрены и оплачены)
             ws_paid_passes = wb.create_sheet("Оплаченные пропуска")
             ws_paid_passes.append([
@@ -333,11 +309,8 @@ async def export_statistics_to_xlsx(callback: CallbackQuery):
                 "Участок/Компания",
                 "Должность",
                 "Категория веса",
-                "Категория длины",
                 "Номер авто",
                 "Марка",
-                "Груз",
-                "Цель",
                 "Дата визита",
                 "Статус пропуска",
                 "Сумма оплаты (руб)",
@@ -424,11 +397,8 @@ async def export_statistics_to_xlsx(callback: CallbackQuery):
                     plot_or_company,
                     position,
                     tp.weight_category,
-                    tp.length_category,
                     tp.car_number,
                     tp.car_brand,
-                    tp.cargo_type,
-                    tp.purpose,
                     tp.visit_date.strftime("%Y-%m-%d"),
                     tp.status,
                     amount_k / 100.0,
