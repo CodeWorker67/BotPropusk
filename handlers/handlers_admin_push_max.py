@@ -26,8 +26,9 @@ MAX_BOT_URL = "https://max.ru/id5020094422_bot"
 
 def _max_announce_text(phone_display: str) -> str:
     return (
-        f'Теперь бот работает так же в МАКС (<a href="{MAX_BOT_URL}">{MAX_BOT_URL}</a>).\n\n'
-        f'Зайдите в бота (<a href="{MAX_BOT_URL}">{MAX_BOT_URL}</a>), нажмите «Начать» '
+        f'Теперь бот работает так же в (<a href="{MAX_BOT_URL}">MAX</a>).\n\n'
+        f'{MAX_BOT_URL}\n\n'
+        f'Зайдите в бота, нажмите «Начать» '
         f"и введите ваш номер телефона, который вы указывали при регистрации в ТГ — "
         f"<b>{phone_display}</b>.\n\n"
         "Ваши данные автоматически подтянутся в бота МАКС и можно приступать к оформлению заявок."
