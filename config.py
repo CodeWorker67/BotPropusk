@@ -10,7 +10,7 @@ ADMIN_IDS = {int(x) for x in os.environ.get("ADMIN_IDS").split()}
 MAX_TRUCK_PASSES = int(os.environ.get("MAX_TRUCK_PASSES", "0"))
 # Картинка с типами ТС при выборе грузовой категории (можно переопределить в .env)
 _DEFAULT_TRUCK_CAT_PHOTO = (
-    "AgACAgIAAxkBAAEB6Bxp30UvAUAIGDFpfFnueM7Bw3k-mwACZBprG_q1AUv-Yb5oDbsrEwEAAwIAA3MAAzsE"
+    "AgACAgIAAxkBAAEB6o1p4Jgp576n4Wu2R2zlHwWJwNSDDQACohNrG7QlAAFL9OZ90Vt4Ri8BAAMCAANzAAM7BA"
 )
 TRUCK_CATEGORIES_PHOTO_FILE_ID: Optional[str] = (
     (os.environ.get("TRUCK_CATEGORIES_PHOTO_FILE_ID") or "").strip() or _DEFAULT_TRUCK_CAT_PHOTO
