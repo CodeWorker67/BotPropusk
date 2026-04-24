@@ -25,6 +25,7 @@ from truck_yookassa_flow import (
     create_awaiting_payment_truck_pass,
     send_truck_payment_message,
 )
+from temp_pass_staff_notify import build_auto_approved_staff_notice
 
 from bot import bot
 from config import PAGE_SIZE, PASS_TIME, MAX_CAR_PASSES, MAX_TRUCK_PASSES, RAZRAB, TRUCK_CATEGORIES_PHOTO_FILE_ID
@@ -887,6 +888,10 @@ async def process_comment_and_save(message: Message, state: FSMContext):
         comment = message.text if message.text else None
         status = "pending"  # По умолчанию статус "на рассмотрении"
 
+        resident_id: int | None = None
+        r_fio = ""
+        plot_number: str | None = None
+
         async with AsyncSessionLocal() as session:
             # Получаем текущего резидента
             resident = await session.execute(
@@ -898,6 +903,10 @@ async def process_comment_and_save(message: Message, state: FSMContext):
                 await message.answer("❌ Ошибка: резидент не найден")
                 await state.clear()
                 return
+
+            resident_id = resident.id
+            r_fio = resident.fio or ""
+            plot_number = resident.plot_number
 
             # Даты для нового пропуска
             new_visit_date = data['visit_date']
@@ -962,12 +971,25 @@ async def process_comment_and_save(message: Message, state: FSMContext):
             await asyncio.sleep(random.randint(180, 720))
             await message.answer(f"✅ Ваш временный пропуск одобрен на машину с номером {data.get('car_number').upper()}", reply_markup=keyboard)
             await message.answer(text_warning)
+            staff_text = build_auto_approved_staff_notice(
+                header_line=f"Пропуск от резидента {r_fio} одобрен автоматически",
+                vehicle_type=data.get("vehicle_type"),
+                weight_category=data.get("weight_category"),
+                length_category=data.get("length_category"),
+                cargo_type=data.get("cargo_type"),
+                car_brand=data.get("car_brand"),
+                car_model=None,
+                car_number=data.get("car_number"),
+                visit_date=new_visit_date,
+                purpose=str(data.get("days")),
+                payment_rubles=None,
+            )
             tg_ids = await get_active_admins_managers_sb_tg_ids()
             for tg_id in tg_ids:
                 try:
                     await bot.send_message(
                         tg_id,
-                        text=f'Пропуск от резидента {resident.fio} на машину с номером {data.get("car_number").upper()} одобрен автоматически.',
+                        text=staff_text,
                         reply_markup=admin_reply_keyboard
                     )
                     await asyncio.sleep(0.05)
@@ -979,35 +1001,37 @@ async def process_comment_and_save(message: Message, state: FSMContext):
                 try:
                     await bot.send_message(
                         tg_id,
-                        text=f'Поступила заявка на временный пропуск от резидента {resident.fio}.\n(Пропуска > Временные пропуска > На утверждении)',
+                        text=f'Поступила заявка на временный пропуск от резидента {r_fio}.\n(Пропуска > Временные пропуска > На утверждении)',
                         reply_markup=admin_reply_keyboard
                     )
                     await asyncio.sleep(0.05)
                 except:
                     pass
-        new_pass = TemporaryPass(
-            owner_type="resident",
-            resident_id=resident.id,
-            vehicle_type=data.get("vehicle_type"),
-            weight_category=data.get("weight_category", None),
-            length_category=data.get("length_category", None),
-            car_number=data.get("car_number").upper(),
-            car_brand=data.get("car_brand"),
-            cargo_type=data.get("cargo_type"),
-            purpose=str(data.get("days")),
-            destination=resident.plot_number,
-            visit_date=new_visit_date,
-            owner_comment=comment,
-            status=status,
-            created_at=datetime.datetime.now(),
-            time_registration=datetime.datetime.now() if status == "approved" else None
-        )
 
-        session.add(new_pass)
-        await session.commit()
+        async with AsyncSessionLocal() as session:
+            new_pass = TemporaryPass(
+                owner_type="resident",
+                resident_id=resident_id,
+                vehicle_type=data.get("vehicle_type"),
+                weight_category=data.get("weight_category", None),
+                length_category=data.get("length_category", None),
+                car_number=data.get("car_number").upper(),
+                car_brand=data.get("car_brand"),
+                cargo_type=data.get("cargo_type"),
+                purpose=str(data.get("days")),
+                destination=plot_number,
+                visit_date=new_visit_date,
+                owner_comment=comment,
+                status=status,
+                created_at=datetime.datetime.now(),
+                time_registration=datetime.datetime.now() if status == "approved" else None
+            )
+            session.add(new_pass)
+            await session.commit()
+
         await bot.send_message(
             1012882762,
-            text=f'{count}_{resident.fio}_{data.get("days")}_{new_visit_date.strftime("%d.%m.%Y")}',
+            text=f'{count}_{r_fio}_{data.get("days")}_{new_visit_date.strftime("%d.%m.%Y")}',
         )
         await state.clear()
     except Exception as e:

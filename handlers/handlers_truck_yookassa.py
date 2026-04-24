@@ -21,6 +21,7 @@ from db.models import (
 )
 from db.util import get_active_admins_managers_sb_tg_ids, text_warning
 from handlers.handlers_admin_user_management import admin_reply_keyboard
+from temp_pass_staff_notify import build_auto_approved_staff_notice
 from yookassa_api import get_payment_status
 
 logger = logging.getLogger(__name__)
@@ -103,18 +104,31 @@ async def yk_check_truck_payment(callback: CallbackQuery) -> None:
                 )
                 await callback.message.answer(text_warning)
 
+                paid_rub = max(0, (pay.amount_kopeks or 0) // 100)
                 for tg_id in await get_active_admins_managers_sb_tg_ids():
                     try:
                         if tp.owner_type == "resident" and resident:
-                            note = f"Пропуск от резидента {resident.fio} на машину с номером {car_num} одобрен автоматически."
+                            hdr = f"Пропуск от резидента {resident.fio} одобрен автоматически"
                         elif tp.owner_type == "contractor" and contractor:
-                            note = (
+                            hdr = (
                                 f"Пропуск от подрядчика {contractor.fio}, "
-                                f"{contractor.company} — {contractor.position}, "
-                                f"на машину с номером {car_num} одобрен автоматически."
+                                f"{contractor.company or ''} — {contractor.position or ''} одобрен автоматически"
                             )
                         else:
-                            note = f"Временный пропуск №{tp.id} одобрен автоматически после оплаты."
+                            hdr = f"Временный пропуск №{tp.id} одобрен автоматически после оплаты"
+                        note = build_auto_approved_staff_notice(
+                            header_line=hdr,
+                            vehicle_type=tp.vehicle_type,
+                            weight_category=tp.weight_category,
+                            length_category=tp.length_category,
+                            cargo_type=tp.cargo_type,
+                            car_brand=tp.car_brand,
+                            car_model=None,
+                            car_number=tp.car_number,
+                            visit_date=tp.visit_date,
+                            purpose=tp.purpose,
+                            payment_rubles=paid_rub,
+                        )
                         await bot.send_message(tg_id, text=note, reply_markup=admin_reply_keyboard)
                         await asyncio.sleep(0.05)
                     except Exception:

@@ -22,6 +22,7 @@ from temporary_truck import (
     category_from_truck_callback_data,
     truck_category_markup,
 )
+from temp_pass_staff_notify import build_auto_approved_staff_notice
 
 
 router = Router()
@@ -195,15 +196,28 @@ async def process_self_truck_visit_date(message: Message, state: FSMContext):
             f"✅ Временный пропуск на машину {data['car_number'].upper()} оформлен!",
             reply_markup=get_passes_menu(),
         )
+        staff_text = build_auto_approved_staff_notice(
+            header_line=(
+                f"Пропуск от {owner_info} одобрен автоматически.\n"
+                f"(Пропуска > Временные пропуска > Подтвержденные)"
+            ),
+            vehicle_type="truck",
+            weight_category=data.get("weight_category"),
+            length_category=None,
+            cargo_type=None,
+            car_brand=data.get("car_brand"),
+            car_model=None,
+            car_number=data.get("car_number"),
+            visit_date=visit_date,
+            purpose="0",
+            payment_rubles=None,
+        )
         tg_ids = await get_active_admins_managers_sb_tg_ids()
         for tg_id in tg_ids:
             try:
                 await bot.send_message(
                     tg_id,
-                    text=(
-                        f"Пропуск от {owner_info} на машину с номером {data['car_number'].upper()} "
-                        f"одобрен автоматически.\n(Пропуска > Временные пропуска > Подтвержденные)"
-                    ),
+                    text=staff_text,
                     reply_markup=admin_reply_keyboard,
                 )
                 await asyncio.sleep(0.05)
@@ -366,12 +380,28 @@ async def process_self_comment_and_save(message: Message, state: FSMContext):
             f"✅ Временный пропуск на машину {data['car_number'].upper()} оформлен!",
             reply_markup=get_passes_menu()
         )
+        staff_text = build_auto_approved_staff_notice(
+            header_line=(
+                f"Пропуск от {owner_info} одобрен автоматически.\n"
+                f"(Пропуска > Временные пропуска > Подтвержденные)"
+            ),
+            vehicle_type=data.get("vehicle_type"),
+            weight_category=data.get("weight_category"),
+            length_category=data.get("length_category"),
+            cargo_type=data.get("cargo_type"),
+            car_brand=data.get("car_brand"),
+            car_model=None,
+            car_number=data.get("car_number"),
+            visit_date=data.get("visit_date"),
+            purpose=str(data.get("days")),
+            payment_rubles=None,
+        )
         tg_ids = await get_active_admins_managers_sb_tg_ids()
         for tg_id in tg_ids:
             try:
                 await bot.send_message(
                     tg_id,
-                    text=f'Пропуск от {owner_info} на машину с номером {data["car_number"].upper()} одобрен автоматически.\n(Пропуска > Временные пропуска > Подтвержденные)',
+                    text=staff_text,
                     reply_markup=admin_reply_keyboard
                 )
                 await asyncio.sleep(0.05)
